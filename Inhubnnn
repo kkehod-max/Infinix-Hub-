@@ -1,0 +1,477 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local CoreGui = game:GetService("CoreGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+local Window = WindUI:CreateWindow({
+    Title = "INFINIX HUB",
+    Icon = "rbxassetid://93677558115432",
+    Author = "INFINIX TEAM",
+    Folder = "INFINIXHUB",
+    Size = UDim2.fromOffset(580, 460),
+    MinSize = Vector2.new(560, 350),
+    MaxSize = Vector2.new(850, 560),
+    Transparent = true,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 200,
+    HideSearchBar = true,
+    ScrollBarEnabled = false,
+    User = {
+        Enabled = true,
+        Name = LocalPlayer.Name,
+        Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId
+    }
+})
+
+Window:EditOpenButton({ Enabled = false })
+
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "WindUI_Toggle"
+ScreenGui.ResetOnSpawn = false
+
+local ToggleBtn = Instance.new("ImageButton", ScreenGui)
+ToggleBtn.Size = UDim2.new(0,50,0,50)
+ToggleBtn.Position = UDim2.new(0,20,0.5,-25)
+ToggleBtn.BackgroundTransparency = 1
+ToggleBtn.Image = "rbxassetid://93677558115432"
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+
+local function ToggleUI()
+    if Window.Toggle then
+        Window:Toggle()
+    else
+        Window.UI.Enabled = not Window.UI.Enabled
+    end
+end
+
+ToggleBtn.MouseButton1Click:Connect(ToggleUI)
+UserInputService.InputBegan:Connect(function(i,gp)
+    if not gp and i.KeyCode == Enum.KeyCode.T then
+        ToggleUI()
+    end
+end)
+
+local PlayerTab = Window:Tab({Title="Player",Icon="user"})
+local ESPTab = Window:Tab({Title="ESP",Icon="crosshair"})
+local PVPTab = Window:Tab({Title="PVP",Icon="target"})
+local GunmodeTab = Window:Tab({Title="Gunmode",Icon="gun"})
+local QuestTab = Window:Tab({Title="Quest",Icon="flag"})
+local ServerTab = Window:Tab({Title="Server",Icon="globe"})
+local SettingsTab = Window:Tab({Title="Settings",Icon="sliders"})
+
+PlayerTab:Section({Title="Player Stats"})
+local BankBalance = PlayerTab:Button({Title="Bank Balance",Desc="<b><font color='#1E90FF'>$0</font></b>"})
+local HandBalance = PlayerTab:Button({Title="Hand Balance",Desc="<b><font color='#00BFFF'>$0</font></b>"})
+
+local function formatMoney(amount)
+    amount = tonumber(amount) or 0
+    if amount >= 1000000 then return string.format("$%.1fM", amount/1000000)
+    elseif amount >= 1000 then return string.format("$%.1fK", amount/1000)
+    else return string.format("$%d", amount) end
+end
+
+local function HandMoney()
+    local success, value = pcall(function()
+        local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
+        if not PlayerGui then return 0 end
+        local topRight = PlayerGui:FindFirstChild("TopRightHud")
+        if topRight then
+            local holder = topRight:FindFirstChild("Holder")
+            if holder and holder:FindFirstChild("Frame") and holder.Frame:FindFirstChild("MoneyTextLabel") then
+                return tonumber(holder.Frame.MoneyTextLabel.Text:gsub("[$,]", "")) or 0
+            end
+        end
+        return 0
+    end)
+    return success and value or 0
+end
+
+local function ATMMoney()
+    local success, value = pcall(function()
+        for _, v in ipairs(PlayerGui:GetDescendants()) do
+            if v:IsA("TextLabel") and (v.Text:find("Bank") or v.Text:find("Balance")) then
+                return tonumber(v.Text:gsub("[$,]", ""):gsub("Bank", ""):gsub("Balance", ""):gsub(":", ""):match("%d+")) or 0
+            end
+        end
+        return 0
+    end)
+    return success and value or 0
+end
+
+task.spawn(function()
+    while task.wait(0.5) do
+        BankBalance:SetDesc('<b><font color="#1E90FF">' .. formatMoney(ATMMoney()) .. "</font></b>")
+        HandBalance:SetDesc('<b><font color="#00BFFF">' .. formatMoney(HandMoney()) .. "</font></b>")
+    end
+end)
+
+PlayerTab:Section({Title="ซ่อนชื่อและเลเวล"})
+PlayerTab:Button({Title="เปิดใช้ระบบ", Desc="คลิกเพื่อเปิดระบบซ่อนชื่อและเลเวล", Callback = function()
+    loadstring(game:HttpGet("https://pastefy.app/3BxE2aGP/raw",true))()
+end})
+
+PlayerTab:Section({Title="Sit System"})
+local sit=false
+local sitHeight=0
+local sitConn
+
+PlayerTab:Toggle({
+    Title="เก็บของใต้พื้น",
+    Callback=function(v)
+        sit=v
+        if sitConn then sitConn:Disconnect() end
+        local c=LocalPlayer.Character
+        if c and c:FindFirstChild("Humanoid") then
+            c.Humanoid.Sit=v
+            if v then
+                sitConn=RunService.Heartbeat:Connect(function()
+                    if c:FindFirstChild("HumanoidRootPart") then
+                        c.HumanoidRootPart.CFrame=c.HumanoidRootPart.CFrame+Vector3.new(0,sitHeight,0)
+                    end
+                end)
+            end
+        end
+    end
+})
+
+PlayerTab:Slider({
+    Title="ปรับ Height",
+    Step=0.1,
+    Value={Min=-5,Max=4,Default=0},
+    Callback=function(v) sitHeight=v end
+})
+
+PlayerTab:Section({Title="Jump power"})
+local infJump=false
+local jumpPower=70
+local jumpConn
+
+PlayerTab:Toggle({
+    Title="Jump power",
+    Callback=function(v)
+        infJump=v
+        if jumpConn then jumpConn:Disconnect() end
+        if v then
+            jumpConn=UserInputService.JumpRequest:Connect(function()
+                local c=LocalPlayer.Character
+                if c and c:FindFirstChild("HumanoidRootPart") then
+                    c.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+                    c.HumanoidRootPart.Velocity=Vector3.new(
+                        c.HumanoidRootPart.Velocity.X,
+                        jumpPower,
+                        c.HumanoidRootPart.Velocity.Z
+                    )
+                end
+            end)
+        end
+    end
+})
+
+PlayerTab:Slider({
+    Title="Jump Power",
+    Step=5,
+    Value={Min=20,Max=100,Default=70},
+    Callback=function(v) jumpPower=v end
+})
+
+PlayerTab:Section({Title="Warp Walk"})
+local warpEnabled, warpDistance, warpSpeed, lastWarp, warpConnection = false, 0.5, 0.1, 0
+
+PlayerTab:Toggle({
+    Title="Enable Warp",
+    Callback=function(v)
+        warpEnabled = v
+        if warpConnection then warpConnection:Disconnect() warpConnection = nil end
+        if v then
+            warpConnection = RunService.Heartbeat:Connect(function()
+                if warpEnabled and tick() - lastWarp >= warpSpeed then
+                    local char = LocalPlayer.Character
+                    if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
+                        local moveDir = char.Humanoid.MoveDirection
+                        if moveDir.Magnitude > 0 then
+                            char.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame + (moveDir * warpDistance)
+                            lastWarp = tick()
+                        end
+                    end
+                end
+            end)
+        end
+    end
+})
+
+PlayerTab:Slider({
+    Title="Warp Distance",
+    Step=0.1,
+    Value={Min=0.1,Max=0.9,Default=0.9},
+    Callback=function(v) warpDistance = tonumber(v) or 0.5 end
+})
+
+PlayerTab:Slider({
+    Title="Warp Speed",
+    Step=0.01,
+    Value={Min=0.01,Max=0.09,Default=0.09},
+    Callback=function(v) warpSpeed = tonumber(v) or 0.1 end
+})
+
+PlayerTab:Section({Title="Infinite Stamina"})
+
+local Net = require(ReplicatedStorage.Modules.Core.Net)
+local SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
+
+PlayerTab:Toggle({
+    Title = "Infinite Stamina",
+    Default = false,
+    Callback = function(v)
+        if v then
+            if not getgenv().Bypassed then
+                local func = debug.getupvalue(Net.get,2)
+                debug.setconstant(func,3,'__Bypass')
+                debug.setconstant(func,4,'__Bypass')
+                getgenv().Bypassed = true
+            end
+            
+            repeat task.wait() until getgenv().Bypassed
+
+            RunService.Heartbeat:Connect(function()
+                Net.send("set_sprinting_1",true)
+            end)
+
+            local consume_stamina = SprintModule.consume_stamina
+            local SprintBar = debug.getupvalue(consume_stamina, 2).sprint_bar
+            local __InfiniteStamina = SprintBar.update
+
+            SprintBar.update = function(...)
+                if getgenv().InfiniteStamina then
+                    return __InfiniteStamina(function()
+                        return 0.5
+                    end)
+                end
+                return __InfiniteStamina(...)
+            end
+            
+            getgenv().InfiniteStamina = true
+        else
+            getgenv().InfiniteStamina = false
+        end
+    end
+})
+
+PVPTab:Toggle({Title="Silent Aim",Callback=function(v) if v then loadstring(game:HttpGet("https://pastefy.app/zIYCchPD/raw"))() end end})
+
+local Automatic = false
+local FireRate = 1500
+local toolCache = {}
+
+local function matchesTarget(name, target)
+    name = name:lower()
+    target = target:lower()
+    return name:find(target) ~= nil or name:match("%d*_" .. target .. "_?%d*") ~= nil
+end
+
+local function applyAttributesSmart(gun)
+    local prev = toolCache[gun]
+    if prev and prev.FireRate == FireRate then return end
+
+    local attrValue = gun:GetAttribute("fire_rate")
+    if attrValue ~= nil then
+        gun:SetAttribute("fire_rate", FireRate)
+    end
+
+    for _, child in ipairs(gun:GetDescendants()) do
+        if (child:IsA("NumberValue") or child:IsA("IntValue")) and matchesTarget(child.Name, "fire_rate") then
+            child.Value = FireRate
+        end
+    end
+
+    toolCache[gun] = { FireRate = FireRate }
+end
+
+local function updateAllGuns()
+    if LocalPlayer.Character then
+        for _, tool in ipairs(LocalPlayer.Character:GetChildren()) do
+            if tool:IsA("Tool") then
+                applyAttributesSmart(tool)
+            end
+        end
+    end
+
+    for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
+        if tool:IsA("Tool") then
+            applyAttributesSmart(tool)
+        end
+    end
+end
+
+LocalPlayer.CharacterAdded:Connect(function(char)
+    if Automatic then
+        updateAllGuns()
+    end
+
+    char.ChildAdded:Connect(function(child)
+        if child:IsA("Tool") and Automatic then
+            applyAttributesSmart(child)
+        end
+    end)
+end)
+
+LocalPlayer.Backpack.ChildAdded:Connect(function(child)
+    if child:IsA("Tool") and Automatic then
+        applyAttributesSmart(child)
+    end
+end)
+
+GunmodeTab:Toggle({
+    Title = "Automatic",
+    Default = false,
+    Callback = function(state)
+        Automatic = state
+        if Automatic then
+            updateAllGuns()
+        end
+    end
+})
+
+GunmodeTab:Slider({
+    Title = "Fire Rate",
+    Value = { Min = 100, Max = 2000, Default = FireRate },
+    Step = 1,
+    Callback = function(value)
+        FireRate = tonumber(value)
+        updateAllGuns()
+    end
+})
+
+local function findCounterTable()
+    if not getgc then return nil end
+    
+    for _, obj in ipairs(getgc(true)) do
+        if typeof(obj) == "table" then
+            if rawget(obj, "event") and rawget(obj, "func") then
+                return obj
+            end
+        end
+    end
+    return nil
+end
+
+local function createNetwork()
+    local CounterTable = findCounterTable()
+    if not CounterTable then return nil end
+    
+    local Net = {}
+    
+    function Net.get(...)
+        CounterTable.func = (CounterTable.func or 0) + 1
+        local GetRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Get")
+        return GetRemote:InvokeServer(CounterTable.func, ...)
+    end
+    
+    function Net.send(action)
+        CounterTable.event = (CounterTable.event or 0) + 1
+        local SendRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Send")
+        SendRemote:FireServer(CounterTable.event, action)
+    end
+    
+    return Net
+end
+
+QuestTab:Button({
+    Title = "Clear All Quests",
+    Desc = "เคลียร์เควสทั้งหมด",
+    Callback = function()
+        task.spawn(function()
+            local player = Players.LocalPlayer
+            
+            local Net = createNetwork()
+            if not Net then
+                warn("❌ Cannot connect to game network!")
+                return false
+            end
+            
+            local success, questUI = pcall(function()
+                return player:WaitForChild("PlayerGui"):WaitForChild("Quests"):WaitForChild("QuestsHolder"):WaitForChild("QuestsScrollingFrame")
+            end)
+            
+            if not success or not questUI then
+                warn("❌ Cannot find quest UI!")
+                return false
+            end
+            
+            local cleared = 0
+            local total = 0
+            
+            for _, child in pairs(questUI:GetChildren()) do
+                if child:IsA("Frame") or child:IsA("TextButton") or child:IsA("ImageButton") then
+                    total = total + 1
+                    
+                    local success, result = pcall(function()
+                        return Net.get("claim_quest", child.Name)
+                    end)
+                    
+                    if success then
+                        cleared = cleared + 1
+                        print(" Claimed quest:", child.Name)
+                    else
+                        warn(" Failed to claim:", child.Name)
+                    end
+                    
+                    task.wait(0.15)
+                end
+            end
+            
+            print(" Quest Clear Complete!")
+            print(" Success: " .. cleared .. "/" .. total .. " quests")
+            
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Quest Clear",
+                Text = "Cleared " .. cleared .. "/" .. total .. " quests",
+                Duration = 5
+            })
+            
+            return true
+        end)
+    end
+})
+
+ESPTab:Toggle({Title="ESP Box",Callback=function(v) if v then loadstring(game:HttpGet("https://pastefy.app/uk8Y2j6n/raw"))() end end})
+ESPTab:Toggle({Title="ESP Name",Callback=function(v) if v then loadstring(game:HttpGet("https://pastefy.app/4j8W9CRT/raw"))() end end})
+ESPTab:Toggle({Title="ESP Item",Callback=function(v) if v then loadstring(game:HttpGet("https://pastefy.app/uAhJQuzj/raw"))() end end})
+
+ServerTab:Button({
+    Title="Server Hop",
+    Callback=function()
+        local servers=HttpService:JSONDecode(game:HttpGet(
+            ("https://games.roblox.com/v1/games/%s/servers/Public?limit=100"):format(game.PlaceId)
+        )).data
+        for _,s in ipairs(servers) do
+            if s.playing<s.maxPlayers then
+                TeleportService:TeleportToPlaceInstance(game.PlaceId,s.id)
+                break
+            end
+        end
+    end
+})
+
+ServerTab:Button({
+    Title="Rejoin",
+    Callback=function()
+        TeleportService:TeleportToPlaceInstance(game.PlaceId,game.JobId)
+    end
+})
+
+SettingsTab:Button({
+    Title="Destroy UI",
+    Callback=function()
+        WindUI:Destroy()
+    end
+})
