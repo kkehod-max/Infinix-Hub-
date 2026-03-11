@@ -394,7 +394,7 @@ PlayerTab:Toggle({
         end
     end
 })
--- SILENT AIM SYSTEM (ตรวจจับการยิง ป้องกันรัว)
+-- SILENT AIMกากๆเวอร์ชั่น0.10
 getgenv().SilentAimEnabled = false
 getgenv().FOV_Radius = 200
 getgenv().AimPart = "Head"
@@ -416,16 +416,15 @@ ScreenTracer.Thickness = 1.5
 ScreenTracer.Transparency = 0.8
 ScreenTracer.Visible = false
 
--- ตัวแปรตรวจจับการยิง
+-- ตัวแปรตรวจจับการยิงกากๆ
 local isFiring = false
 local lastBeamTime = 0
-local beamCooldown = 0.15 -- 150ms ระหว่างลำแสงแต่ละครั้ง
+local beamCooldown = 0.15
 
--- ตรวจจับการคลิกเมาส์
 UserInputService.InputBegan:Connect(function(input, gp)
     if not gp and input.UserInputType == Enum.UserInputType.MouseButton1 then
         isFiring = true
-        -- รีเซ็ตหลังจาก 0.1 วินาที (เผื่อกดค้าง)
+
         task.spawn(function()
             task.wait(0.1)
             isFiring = false
@@ -433,7 +432,7 @@ UserInputService.InputBegan:Connect(function(input, gp)
     end
 end)
 
--- ตรวจจับการกดบนมือถือ
+-- ตรวจจับการกนด
 UserInputService.TouchStarted:Connect(function(input, gp)
     if not gp then
         isFiring = true
@@ -445,10 +444,9 @@ UserInputService.TouchStarted:Connect(function(input, gp)
 end)
 
 local function CreateBulletBeam(startPos, endPos)
-    -- เช็คว่ายิงจริงหรือไม่
+    -- ดสดสส
     if not isFiring then return end
-    
-    -- กันรัว
+
     if tick() - lastBeamTime < beamCooldown then
         return
     end
@@ -607,7 +605,7 @@ PVPTab:Slider({
     end
 })
 
--- เพิ่มตัวปรับความถี่ลำแสง
+-- สกสกส
 PVPTab:Slider({
     Title = "Beam Cooldown",
     Desc = "ระยะห่างลำแสง (ms)",
