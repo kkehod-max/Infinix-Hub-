@@ -1,108 +1,77 @@
--- Auto Farm + Fast Attack | Blox Fruit
--- WindUI by Footagesus
+-- PIG HUB | Auto Farm | Blox Fruit
+-- ระบบจาก Domadic Hub + WindUI
 
--- ========== LOAD WINDUI ==========
-local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-
--- ========== SERVICES ==========
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TeleportService = game:GetService("TeleportService")
+local HttpService = game:GetService("HttpService")
+local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-local VirtualUser = game:GetService("VirtualUser")
+
 local LocalPlayer = Players.LocalPlayer
 
+local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+
+local Window = WindUI:CreateWindow({
+    Title = "PIG HUB",
+    Icon = "rbxassetid://81857105973850",
+    Author = "PIG TEAM",
+    Folder = "PIG HUB",
+    Size = UDim2.fromOffset(580, 460),
+    MinSize = Vector2.new(560, 350),
+    MaxSize = Vector2.new(850, 560),
+    Transparent = true,
+    Theme = "Dark",
+    Resizable = true,
+    SideBarWidth = 200,
+    HideSearchBar = true,
+    ScrollBarEnabled = false,
+    User = {
+        Enabled = true,
+        Name = LocalPlayer.Name,
+        Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId
+    }
+})
+
+Window:EditOpenButton({ Enabled = false })
+
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "WindUI_Toggle"
+ScreenGui.ResetOnSpawn = false
+
+local ToggleBtn = Instance.new("ImageButton", ScreenGui)
+ToggleBtn.Size = UDim2.new(0, 50, 0, 50)
+ToggleBtn.Position = UDim2.new(0, 20, 0.5, -25)
+ToggleBtn.BackgroundTransparency = 1
+ToggleBtn.Image = "rbxassetid://81857105973850"
+ToggleBtn.Active = true
+ToggleBtn.Draggable = true
+
+local function ToggleUI()
+    if Window.Toggle then Window:Toggle()
+    else Window.UI.Enabled = not Window.UI.Enabled end
+end
+
+ToggleBtn.MouseButton1Click:Connect(ToggleUI)
+UserInputService.InputBegan:Connect(function(i, gp)
+    if not gp and i.KeyCode == Enum.KeyCode.T then ToggleUI() end
+end)
+
+-- ========== TABS ==========
+local FarmTab  = Window:Tab({ Title = "Level Farm", Icon = "zap" })
+local MobTab   = Window:Tab({ Title = "Farm Mob",   Icon = "swords" })
+local BossTab  = Window:Tab({ Title = "Boss",       Icon = "skull" })
+local ChestTab = Window:Tab({ Title = "Chest",      Icon = "package" })
+local SettingTab = Window:Tab({ Title = "Setting",  Icon = "settings" })
+
+-- ========== WAIT FOR CHAR ==========
 repeat task.wait() until LocalPlayer.Character
     and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     and LocalPlayer.Data
 
--- ========== FAST ATTACK ==========
-local env = (getgenv or getrenv or getfenv)()
-local modules = ReplicatedStorage:WaitForChild("Modules")
-local net = modules:WaitForChild("Net")
-local charFolder = workspace:WaitForChild("Characters")
-local enemyFolder = workspace:WaitForChild("Enemies")
-
-local AttackCooldown = tick()
-local CachedChars = {}
-
-local Settings = {
-    ClickDelay = 0,
-    AutoClick = true
-}
-
-_G['Fast Attack'] = false
-
-local function IsAlive(Char)
-    if not Char then return nil end
-    local Hum = CachedChars[Char] or Char:FindFirstChildOfClass("Humanoid")
-    if Hum then CachedChars[Char] = Hum return Hum.Health > 0 end
-    return false
-end
-
-local function StartFastAttack()
-    if env._trash_attack then return env._trash_attack end
-
-    local RegisterAttack = net:WaitForChild("RE/RegisterAttack")
-    local RegisterHit = net:WaitForChild("RE/RegisterHit")
-
-    local AttackModule = {
-        NextAttack = 0,
-        Distance = 150,
-        FirstAttack = false,
-    }
-
-    function AttackModule:AttackEnemy(EnemyHead, Table)
-        if EnemyHead and LocalPlayer:DistanceFromCharacter(EnemyHead.Position) < self.Distance then
-            if not self.FirstAttack then
-                RegisterAttack:FireServer(Settings.ClickDelay or 0)
-                self.FirstAttack = true
-            end
-            RegisterHit:FireServer(EnemyHead, Table or {})
-        end
-    end
-
-    function AttackModule:AttackNearest()
-        local args = {nil, {}}
-        for _, Enemy in ipairs(enemyFolder:GetChildren()) do
-            local humanoidPart = Enemy:FindFirstChild("HumanoidRootPart")
-            if humanoidPart and LocalPlayer:DistanceFromCharacter(humanoidPart.Position) < self.Distance then
-                local upperTorso = Enemy:FindFirstChild("UpperTorso")
-                if not args[1] then args[1] = upperTorso
-                else table.insert(args[2], {Enemy, upperTorso}) end
-            end
-        end
-        self:AttackEnemy(unpack(args))
-        for _, Char in ipairs(charFolder:GetChildren()) do
-            if Char ~= LocalPlayer.Character then
-                self:AttackEnemy(Char:FindFirstChild("UpperTorso"))
-            end
-        end
-        if not self.FirstAttack then task.wait(0) end
-    end
-
-    function AttackModule:BladeHits()
-        self:AttackNearest()
-        self.FirstAttack = false
-    end
-
-    task.spawn(function()
-        while task.wait(Settings.ClickDelay or 0) do
-            if not _G['Fast Attack'] then task.wait(0.1) continue end
-            if (tick() - AttackCooldown) < 0 then continue end
-            if not Settings.AutoClick then continue end
-            if not IsAlive(LocalPlayer.Character) then continue end
-            if not LocalPlayer.Character:FindFirstChildOfClass("Tool") then continue end
-            AttackModule:BladeHits()
-        end
-    end)
-
-    env._trash_attack = AttackModule
-    return AttackModule
-end
-
-StartFastAttack()
-
--- ========== AUTO FARM ==========
+-- ========== VARIABLES ==========
 local CommF = ReplicatedStorage.Remotes.CommF_
 local tween
 local Mon, NameMon, NameQuest, LevelQuest
@@ -114,21 +83,38 @@ local PosMon
 local Pos = CFrame.new(0, 2, 3)
 local BypassTP = false
 
-_G.AutoFarm = false
-_G.SelectWeapon = "Melee"
-_G.StopTween = false
-_G.Clip = false
-_G.NotAutoEquip = false
+_G.AutoFarm      = false
+_G.Farmfast      = false
+_G.AutoFarmMob   = false
+_G.AutoFarmNearest = false
+_G.AutoFarmBoss  = false
+_G.AutoQuestBoss = false
+_G.AutoAllBoss   = false
+_G.AutoAllBossHop = false
+_G.SelectWeapon  = "Melee"
+_G.SelectMob     = ""
+_G.SelectBoss    = ""
+_G.BringMonster  = true
+_G.BringMode     = 300
+_G.AUTOHAKI      = true
+_G.Set           = true
+_G.StopTween     = false
+_G.Clip          = false
+_G.NotAutoEquip  = false
 
+-- World detection
 local World1, World2, World3
 if game.PlaceId == 2753915549 then World1 = true
 elseif game.PlaceId == 4442272183 then World2 = true
 elseif game.PlaceId == 7449423635 then World3 = true
 else World1 = true end
 
+-- ========== HELPER FUNCTIONS ==========
 local function AutoHaki()
-    if not LocalPlayer.Character:FindFirstChild("HasBuso") then
-        pcall(function() CommF:InvokeServer("Buso") end)
+    if _G.AUTOHAKI then
+        if not LocalPlayer.Character:FindFirstChild("HasBuso") then
+            pcall(function() CommF:InvokeServer("Buso") end)
+        end
     end
 end
 
@@ -149,6 +135,10 @@ local function EquipWeapon(ToolSe)
             pcall(function() LocalPlayer.Character.Humanoid:EquipTool(LocalPlayer.Backpack:FindFirstChild(ToolSe)) end)
         end
     end
+end
+
+local function TP(Pos)
+    LocalPlayer.Character.HumanoidRootPart.CFrame = Pos
 end
 
 local function topos(CF)
@@ -200,6 +190,21 @@ local function StopTween(target)
     end
 end
 
+local function Hop()
+    pcall(function()
+        local servers = HttpService:JSONDecode(game:HttpGet(
+            ("https://games.roblox.com/v1/games/%s/servers/Public?limit=100"):format(game.PlaceId)
+        )).data
+        for _, s in ipairs(servers) do
+            if s.playing < s.maxPlayers then
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, s.id)
+                break
+            end
+        end
+    end)
+end
+
+-- ========== CHECK QUEST ==========
 local function CheckQuest()
     MyLevel = LocalPlayer.Data.Level.Value
     if World1 then
@@ -236,7 +241,7 @@ local function CheckQuest()
     end
 end
 
--- Auto Weapon Select
+-- ========== AUTO WEAPON SELECT ==========
 task.spawn(function()
     while task.wait() do
         pcall(function()
@@ -252,10 +257,72 @@ task.spawn(function()
     end
 end)
 
+-- Auto SetSpawn
+task.spawn(function()
+    while task.wait() do
+        if _G.Set then
+            pcall(function() CommF:InvokeServer("SetSpawnPoint") end)
+        end
+    end
+end)
+
+-- Auto Haki
+task.spawn(function()
+    while task.wait(.1) do
+        if _G.AUTOHAKI then
+            if not LocalPlayer.Character:FindFirstChild("HasBuso") then
+                pcall(function() CommF:InvokeServer("Buso") end)
+            end
+        end
+    end
+end)
+
+-- Bring Mob
+task.spawn(function()
+    while task.wait() do
+        pcall(function()
+            if _G.BringMonster then
+                CheckQuest()
+                for _, v in pairs(workspace.Enemies:GetChildren()) do
+                    if _G.AutoFarm and StartMagnet and v.Name == Mon
+                        and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart")
+                        and v.Humanoid.Health > 0
+                        and (v.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <= _G.BringMode then
+                        v.HumanoidRootPart.Size = Vector3.new(50,50,50)
+                        v.HumanoidRootPart.CFrame = PosMon
+                        v.Humanoid:ChangeState(14)
+                        v.HumanoidRootPart.CanCollide = false
+                        v.Head.CanCollide = false
+                        pcall(function()
+                            if v.Humanoid:FindFirstChild("Animator") then
+                                v.Humanoid.Animator:Destroy()
+                            end
+                            sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge)
+                        end)
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- Bring Mode convert
+task.spawn(function()
+    while task.wait(.1) do
+        if _G.BringMode then
+            pcall(function()
+                if _G.BringMode == "Low" then _G.BringMode = 250
+                elseif _G.BringMode == "Normal" then _G.BringMode = 300
+                elseif _G.BringMode == "Super Bring" then _G.BringMode = 350 end
+            end)
+        end
+    end
+end)
+
+-- ========== FARM HELPER ==========
 local function FarmLoop(v, QuestUI)
     repeat task.wait()
-        EquipWeapon(_G.SelectWeapon)
-        AutoHaki()
+        EquipWeapon(_G.SelectWeapon) AutoHaki()
         PosMon = v.HumanoidRootPart.CFrame
         topos(v.HumanoidRootPart.CFrame * Pos)
         pcall(function()
@@ -265,29 +332,35 @@ local function FarmLoop(v, QuestUI)
             v.HumanoidRootPart.Size = Vector3.new(70,70,70)
         end)
         StartMagnet = true
-        VirtualUser:CaptureController()
-        VirtualUser:Button1Down(Vector2.new(1280,672))
+        game:GetService("VirtualUser"):CaptureController()
+        game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
     until not _G.AutoFarm or v.Humanoid.Health <= 0 or not v.Parent or not QuestUI.Visible
 end
 
+-- ========== AUTO FARM LEVEL ==========
 -- Normal
 task.spawn(function()
     while task.wait() do
         if FarmMode ~= "Normal" or not _G.AutoFarm then continue end
         pcall(function()
             local QuestUI = LocalPlayer.PlayerGui.Main.Quest
-            local QuestTitle = QuestUI.Container.QuestTitle.Title.Text
-            if not string.find(QuestTitle, NameMon or "") then StartMagnet = false CommF:InvokeServer("AbandonQuest") end
+            local QT = QuestUI.Container.QuestTitle.Title.Text
+            if not string.find(QT, NameMon or "") then StartMagnet = false CommF:InvokeServer("AbandonQuest") end
             if not QuestUI.Visible then
                 UnEquipWeapon(_G.SelectWeapon) StartMagnet = false CheckQuest()
-                if BypassTP and (LocalPlayer.Character.HumanoidRootPart.Position - CFrameQuest.Position).Magnitude > 1500 then BTP(CFrameQuest * CFrame.new(0,20,5)) else topos(CFrameQuest) end
-                if (LocalPlayer.Character.HumanoidRootPart.Position - CFrameQuest.Position).Magnitude <= 5 then CommF:InvokeServer("StartQuest", NameQuest, LevelQuest) end
+                if BypassTP and (LocalPlayer.Character.HumanoidRootPart.Position - CFrameQuest.Position).Magnitude > 1500 then
+                    BTP(CFrameQuest * CFrame.new(0,20,5))
+                else topos(CFrameQuest) end
+                if (LocalPlayer.Character.HumanoidRootPart.Position - CFrameQuest.Position).Magnitude <= 5 then
+                    CommF:InvokeServer("StartQuest", NameQuest, LevelQuest)
+                end
             else
                 CheckQuest()
                 if workspace.Enemies:FindFirstChild(Mon) then
                     for _, v in pairs(workspace.Enemies:GetChildren()) do
-                        if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v.Name == Mon then
-                            if string.find(QuestTitle, NameMon) then FarmLoop(v, QuestUI)
+                        if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid")
+                            and v.Humanoid.Health > 0 and v.Name == Mon then
+                            if string.find(QT, NameMon) then FarmLoop(v, QuestUI)
                             else StartMagnet = false CommF:InvokeServer("AbandonQuest") end
                         end
                     end
@@ -303,18 +376,21 @@ task.spawn(function()
         if FarmMode ~= "Not Tween To Npc Quest" or not _G.AutoFarm then continue end
         pcall(function()
             local QuestUI = LocalPlayer.PlayerGui.Main.Quest
-            local QuestTitle = QuestUI.Container.QuestTitle.Title.Text
-            if not string.find(QuestTitle, NameMon or "") then StartMagnet = false CommF:InvokeServer("AbandonQuest") end
+            local QT = QuestUI.Container.QuestTitle.Title.Text
+            if not string.find(QT, NameMon or "") then StartMagnet = false CommF:InvokeServer("AbandonQuest") end
             if not QuestUI.Visible then
                 StartMagnet = false CheckQuest() UnEquipWeapon(_G.SelectWeapon)
                 CommF:InvokeServer("StartQuest", NameQuest, LevelQuest)
-                if BypassTP and (LocalPlayer.Character.HumanoidRootPart.Position - CFrameMon.Position).Magnitude > 1500 then BTP(CFrameMon) else topos(CFrameMon) end
+                if BypassTP and (LocalPlayer.Character.HumanoidRootPart.Position - CFrameMon.Position).Magnitude > 1500 then
+                    BTP(CFrameMon)
+                else topos(CFrameMon) end
             else
                 CheckQuest()
                 if workspace.Enemies:FindFirstChild(Mon) then
                     for _, v in pairs(workspace.Enemies:GetChildren()) do
-                        if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 and v.Name == Mon then
-                            if string.find(QuestTitle, NameMon) then FarmLoop(v, QuestUI)
+                        if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid")
+                            and v.Humanoid.Health > 0 and v.Name == Mon then
+                            if string.find(QT, NameMon) then FarmLoop(v, LocalPlayer.PlayerGui.Main.Quest)
                             else StartMagnet = false CommF:InvokeServer("AbandonQuest") end
                         end
                     end
@@ -337,7 +413,8 @@ task.spawn(function()
                             AutoHaki() EquipWeapon(_G.SelectWeapon)
                             pcall(function() v.HumanoidRootPart.CanCollide = false v.Humanoid.WalkSpeed = 0 v.HumanoidRootPart.Size = Vector3.new(50,50,50) end)
                             topos(v.HumanoidRootPart.CFrame * Pos)
-                            VirtualUser:CaptureController() VirtualUser:Button1Down(Vector2.new(1280,672))
+                            game:GetService("VirtualUser"):CaptureController()
+                            game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
                         until not _G.AutoFarm or v.Humanoid.Health <= 0 or not v.Parent
                     end
                 end
@@ -346,119 +423,333 @@ task.spawn(function()
     end
 end)
 
--- ========== WINDUI ==========
-local Window = WindUI:CreateWindow({
-    Title = "PIG HUB",
-    Icon = "sword",
-    Author = "Blox Fruit",
-    Folder = "PigHub",
-    Size = UDim2.fromOffset(580, 460),
-    Theme = "Dark",
-})
+-- ========== AUTO FARM MOB ==========
+task.spawn(function()
+    while task.wait() do
+        if not _G.AutoFarmMob then continue end
+        pcall(function()
+            if workspace.Enemies:FindFirstChild(_G.SelectMob) then
+                for _, v in pairs(workspace.Enemies:GetChildren()) do
+                    if v.Name == _G.SelectMob and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+                        repeat task.wait()
+                            AutoHaki() EquipWeapon(_G.SelectWeapon)
+                            v.HumanoidRootPart.CanCollide = false v.Humanoid.WalkSpeed = 0
+                            v.HumanoidRootPart.Size = Vector3.new(80,80,80)
+                            PosMon = v.HumanoidRootPart.CFrame
+                            topos(v.HumanoidRootPart.CFrame * Pos)
+                            game:GetService("VirtualUser"):CaptureController()
+                            game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
+                        until not _G.AutoFarmMob or not v.Parent or v.Humanoid.Health <= 0
+                    end
+                end
+            else
+                pcall(function()
+                    for _, v in pairs(workspace["_WorldOrigin"].EnemySpawns:GetChildren()) do
+                        if string.find(v.Name, _G.SelectMob) then
+                            if (LocalPlayer.Character.HumanoidRootPart.Position - v.Position).Magnitude >= 10 then
+                                topos(v.CFrame * CFrame.new(5,10,2))
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+    end
+end)
 
--- ===== TAB: AUTO FARM =====
-local FarmTab = Window:Tab({
-    Title = "Auto Farm",
-    Icon = "zap",
-})
+-- ========== AUTO FARM NEAREST ==========
+task.spawn(function()
+    while task.wait() do
+        if not _G.AutoFarmNearest then continue end
+        for _, v in pairs(workspace.Enemies:GetChildren()) do
+            if v.Name and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                repeat task.wait()
+                    EquipWeapon(_G.SelectWeapon)
+                    AutoHaki()
+                    topos(v.HumanoidRootPart.CFrame * Pos)
+                    v.HumanoidRootPart.CanCollide = false
+                    v.HumanoidRootPart.Size = Vector3.new(60,60,60)
+                    game:GetService("VirtualUser"):CaptureController()
+                    game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672), workspace.CurrentCamera.CFrame)
+                    PosMon = v.HumanoidRootPart.CFrame
+                until not _G.AutoFarmNearest or not v.Parent or v.Humanoid.Health <= 0
+            end
+        end
+    end
+end)
 
-local MonsterStatus = FarmTab:Paragraph({
-    Title = "Monster",
-    Desc = "...",
-})
-local QuestStatus = FarmTab:Paragraph({
-    Title = "Quest",
-    Desc = "...",
-})
+-- ========== AUTO FARM BOSS ==========
+task.spawn(function()
+    while task.wait() do
+        if not _G.AutoFarmBoss or _G.AutoQuestBoss then continue end
+        pcall(function()
+            if workspace.Enemies:FindFirstChild(_G.SelectBoss) then
+                for _, v in pairs(workspace.Enemies:GetChildren()) do
+                    if v.Name == _G.SelectBoss and v:FindFirstChild("Humanoid") and v:FindFirstChild("HumanoidRootPart") and v.Humanoid.Health > 0 then
+                        repeat task.wait()
+                            AutoHaki() EquipWeapon(_G.SelectWeapon)
+                            v.HumanoidRootPart.CanCollide = false v.Humanoid.WalkSpeed = 0
+                            v.HumanoidRootPart.Size = Vector3.new(80,80,80)
+                            topos(v.HumanoidRootPart.CFrame * Pos)
+                            game:GetService("VirtualUser"):CaptureController()
+                            game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
+                            pcall(function() sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge) end)
+                        until not _G.AutoFarmBoss or not v.Parent or v.Humanoid.Health <= 0
+                    end
+                end
+            else
+                if ReplicatedStorage:FindFirstChild(_G.SelectBoss) then
+                    local bossHRP = ReplicatedStorage:FindFirstChild(_G.SelectBoss).HumanoidRootPart
+                    if BypassTP then BTP(bossHRP.CFrame)
+                    else topos(bossHRP.CFrame * CFrame.new(5,10,7)) end
+                end
+            end
+        end)
+    end
+end)
+
+-- Auto Farm All Boss
+task.spawn(function()
+    while task.wait() do
+        if not _G.AutoAllBoss then continue end
+        pcall(function()
+            local bossList = {"The Gorilla King","Bobby","The Saw","Yeti","Mob Leader","Vice Admiral","Warden","Chief Warden","Swan","Saber Expert","Magma Admiral","Fishman Lord","Wysper","Thunder God","Cyborg","Greybeard","Diamond","Jeremy","Fajita","Don Swan","Smoke Admiral","Awakened Ice Admiral","Tide Keeper","Order","Darkbeard","Cursed Captain","Stone","Island Empress","Kilo Admiral","Captain Elephant","Beautiful Pirate","Longma","Cake Queen","Soul Reaper","Rip_Indra","Cake Prince","Dough King"}
+            for _, bossName in pairs(bossList) do
+                local boss = ReplicatedStorage:FindFirstChild(bossName)
+                if boss and boss:FindFirstChild("HumanoidRootPart") then
+                    if (boss.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude < 17000 then
+                        repeat task.wait()
+                            AutoHaki() EquipWeapon(_G.SelectWeapon)
+                            boss.Humanoid.WalkSpeed = 0
+                            boss.HumanoidRootPart.CanCollide = false
+                            boss.HumanoidRootPart.Size = Vector3.new(80,80,80)
+                            topos(boss.HumanoidRootPart.CFrame * Pos)
+                            game:GetService("VirtualUser"):CaptureController()
+                            game:GetService("VirtualUser"):Button1Down(Vector2.new(1280,672))
+                            pcall(function() sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge) end)
+                        until boss.Humanoid.Health <= 0 or not _G.AutoAllBoss or not boss.Parent
+                    else
+                        if _G.AutoAllBossHop then Hop() end
+                    end
+                end
+            end
+        end)
+    end
+end)
+
+-- Auto Farm Chest
+task.spawn(function()
+    while task.wait() do
+        if not _G.AutoFarmChest then continue end
+        for _, v in pairs(workspace:GetChildren()) do
+            if v.Name:find("Chest") then
+                if (v.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <= 5000 then
+                    repeat task.wait()
+                        if workspace:FindFirstChild(v.Name) then TP(v.CFrame) end
+                    until not _G.AutoFarmChest or not v.Parent
+                    TP(LocalPlayer.Character.HumanoidRootPart.CFrame)
+                    break
+                end
+            end
+        end
+    end
+end)
+
+-- ========== UI: LEVEL FARM TAB ==========
+FarmTab:Section({ Title = "Status" })
+
+local MonsterLabel = FarmTab:Paragraph({ Title = "Monster", Desc = "..." })
+local QuestLabel   = FarmTab:Paragraph({ Title = "Quest",   Desc = "..." })
 
 task.spawn(function()
     while task.wait(0.5) do
         pcall(function()
             local QuestUI = LocalPlayer.PlayerGui.Main.Quest
             if not QuestUI.Visible then
-                MonsterStatus:SetDesc("...") QuestStatus:SetDesc("...")
+                MonsterLabel:SetDesc("...") QuestLabel:SetDesc("...")
             else
                 CheckQuest()
-                MonsterStatus:SetDesc(tostring(Mon))
-                QuestStatus:SetDesc(tostring(NameQuest).." | Lv: "..tostring(LevelQuest))
+                MonsterLabel:SetDesc(tostring(Mon))
+                QuestLabel:SetDesc(tostring(NameQuest).." | Lv: "..tostring(LevelQuest))
             end
         end)
     end
 end)
 
-FarmTab:Divider({ Title = "Settings" })
+FarmTab:Section({ Title = "Settings" })
+
+FarmTab:Toggle({
+    Title = "Auto Set Spawn Point",
+    Desc = "เปิดถ้าใช้ Bypass TP",
+    Default = true,
+    Callback = function(v) _G.Set = v end
+})
 
 FarmTab:Dropdown({
     Title = "Select Weapon",
-    Desc = "เลือกอาวุธที่ใช้ตี",
-    Options = {"Melee", "Sword", "Gun", "Fruit"},
+    Desc = "เลือกอาวุธ",
+    Options = {"Melee", "Sword", "Fruit", "Gun"},
     Value = "Melee",
-    Callback = function(value) _G.SelectWeapon = value end,
+    Callback = function(v) _G.SelectWeapon = v end
 })
 
 FarmTab:Dropdown({
     Title = "Farm Mode",
-    Desc = "เลือกโหมดการฟาร์ม",
+    Desc = "เลือกโหมดฟาร์ม",
     Options = {"Normal", "Not Tween To Npc Quest", "No Quest"},
     Value = "Normal",
-    Callback = function(value) FarmMode = value end,
+    Callback = function(v) FarmMode = v end
 })
 
-FarmTab:Toggle({
-    Title = "Bypass TP",
-    Desc = "ใช้เมื่อ tween ไปไกลไม่ได้",
-    Value = false,
-    Callback = function(value) BypassTP = value end,
-})
-
-FarmTab:Divider({ Title = "Farm" })
+FarmTab:Section({ Title = "Farm" })
 
 FarmTab:Toggle({
     Title = "Auto Farm Level",
     Desc = "ฟาร์มอัตโนมัติตาม level",
-    Value = false,
-    Callback = function(value)
-        _G.AutoFarm = value
+    Default = false,
+    Callback = function(v)
+        _G.AutoFarm = v
         StopTween(_G.AutoFarm)
-    end,
+    end
 })
 
--- ===== TAB: FAST ATTACK =====
-local AttackTab = Window:Tab({
-    Title = "Fast Attack",
-    Icon = "swords",
+-- ========== UI: FARM MOB TAB ==========
+MobTab:Section({ Title = "Farm Mob" })
+
+local tableMon
+if World1 then
+    tableMon = {"Bandit","Monkey","Gorilla","Pirate","Brute","Desert Bandit","Desert Officer","Snow Bandit","Snowman","Chief Petty Officer","Sky Bandit","Dark Master","Toga Warrior","Gladiator","Military Soldier","Military Spy","Fishman Warrior","Fishman Commando","God's Guard","Shanda","Royal Squad","Royal Soldier","Galley Pirate","Galley Captain"}
+elseif World2 then
+    tableMon = {"Raider","Mercenary","Swan Pirate","Factory Staff","Marine Lieutenant","Marine Captain","Zombie","Vampire","Snow Trooper","Winter Warrior","Lab Subordinate","Horned Warrior","Magma Ninja","Lava Pirate","Ship Deckhand","Ship Engineer","Ship Steward","Ship Officer","Arctic Warrior","Snow Lurker","Sea Soldier","Water Fighter"}
+elseif World3 then
+    tableMon = {"Pirate Millionaire","Dragon Crew Warrior","Dragon Crew Archer","Female Islander","Giant Islander","Marine Commodore","Marine Rear Admiral","Fishman Raider","Fishman Captain","Forest Pirate","Mythological Pirate","Jungle Pirate","Musketeer Pirate","Reborn Skeleton","Living Zombie","Demonic Soul","Posessed Mummy","Peanut Scout","Peanut President","Ice Cream Chef","Ice Cream Commander","Cookie Crafter","Cake Guard","Baking Staff","Head Baker","Cocoa Warrior","Chocolate Bar Battler","Sweet Thief","Candy Rebel","Candy Pirate","Snow Demon","Isle Outlaw","Island Boy","Sun-kissed Warrior","Isle Champion"}
+else tableMon = {"Bandit"} end
+
+MobTab:Dropdown({
+    Title = "Select Mob",
+    Desc = "เลือก mob",
+    Options = tableMon,
+    Value = tableMon[1],
+    Callback = function(v) _G.SelectMob = v end
 })
 
-AttackTab:Divider({ Title = "Fast Attack" })
-
-AttackTab:Toggle({
-    Title = "Fast Attack",
-    Desc = "ตีอัตโนมัติไวๆ",
-    Value = false,
-    Callback = function(value) _G['Fast Attack'] = value end,
+MobTab:Toggle({
+    Title = "Auto Farm Mob",
+    Desc = "ฟาร์ม mob ที่เลือก",
+    Default = false,
+    Callback = function(v)
+        _G.AutoFarmMob = v
+        StopTween(_G.AutoFarmMob)
+    end
 })
 
-AttackTab:Slider({
-    Title = "Attack Distance",
-    Desc = "ระยะโจมตี (default 150)",
-    Min = 10,
-    Max = 500,
-    Value = 150,
-    Callback = function(value)
-        if env._trash_attack then env._trash_attack.Distance = value end
-    end,
+MobTab:Toggle({
+    Title = "Auto Farm Nearest",
+    Desc = "ฟาร์ม mob ที่ใกล้ที่สุด",
+    Default = false,
+    Callback = function(v)
+        _G.AutoFarmNearest = v
+        StopTween(_G.AutoFarmNearest)
+    end
 })
 
-AttackTab:Toggle({
-    Title = "Auto Click",
-    Desc = "จำลองการคลิกอัตโนมัติ",
-    Value = true,
-    Callback = function(value) Settings.AutoClick = value end,
+-- ========== UI: BOSS TAB ==========
+BossTab:Section({ Title = "Boss Farm" })
+
+local bossNames = {"The Gorilla King","Bobby","The Saw","Yeti","Mob Leader","Vice Admiral","Warden","Chief Warden","Swan","Saber Expert","Magma Admiral","Fishman Lord","Wysper","Thunder God","Cyborg","Greybeard","Diamond","Jeremy","Fajita","Don Swan","Smoke Admiral","Awakened Ice Admiral","Tide Keeper","Order","Darkbeard","Cursed Captain","Stone","Island Empress","Kilo Admiral","Captain Elephant","Beautiful Pirate","Longma","Cake Queen","Soul Reaper","Rip_Indra","Cake Prince","Dough King"}
+
+BossTab:Dropdown({
+    Title = "Select Boss",
+    Desc = "เลือก boss",
+    Options = bossNames,
+    Value = bossNames[1],
+    Callback = function(v) _G.SelectBoss = v end
 })
 
--- ===== NOTIFY =====
+BossTab:Toggle({
+    Title = "Auto Farm Boss",
+    Desc = "ฟาร์ม boss ที่เลือก",
+    Default = false,
+    Callback = function(v)
+        _G.AutoFarmBoss = v
+        if v then CommF:InvokeServer("AbandonQuest") end
+        StopTween(_G.AutoFarmBoss)
+    end
+})
+
+BossTab:Toggle({
+    Title = "Auto Quest Boss",
+    Desc = "รับ quest boss อัตโนมัติ",
+    Default = false,
+    Callback = function(v) _G.AutoQuestBoss = v end
+})
+
+BossTab:Toggle({
+    Title = "Auto Farm All Boss",
+    Desc = "ฟาร์มทุก boss ในแมพ",
+    Default = false,
+    Callback = function(v)
+        _G.AutoAllBoss = v
+        StopTween(_G.AutoAllBoss)
+    end
+})
+
+BossTab:Toggle({
+    Title = "Auto Farm All Boss Hop",
+    Desc = "hop เมื่อไม่มี boss",
+    Default = false,
+    Callback = function(v) _G.AutoAllBossHop = v end
+})
+
+-- ========== UI: CHEST TAB ==========
+ChestTab:Section({ Title = "Chest Farm" })
+
+ChestTab:Toggle({
+    Title = "Auto Farm Chest",
+    Desc = "ฟาร์ม chest ในแมพ",
+    Default = false,
+    Callback = function(v)
+        _G.AutoFarmChest = v
+        StopTween(_G.AutoFarmChest)
+    end
+})
+
+-- ========== UI: SETTING TAB ==========
+SettingTab:Section({ Title = "Teleport" })
+
+SettingTab:Toggle({
+    Title = "Bypass TP",
+    Desc = "ใช้เมื่อ tween ไปไกลไม่ได้",
+    Default = false,
+    Callback = function(v) BypassTP = v end
+})
+
+SettingTab:Section({ Title = "Mob Setting" })
+
+SettingTab:Toggle({
+    Title = "Bring Mob",
+    Desc = "ดึง mob เข้าหาตัวเอง",
+    Default = true,
+    Callback = function(v) _G.BringMonster = v end
+})
+
+SettingTab:Dropdown({
+    Title = "Bring Mob Mode",
+    Desc = "ระยะดึง mob",
+    Options = {"Low", "Normal", "Super Bring"},
+    Value = "Normal",
+    Callback = function(v) _G.BringMode = v end
+})
+
+SettingTab:Toggle({
+    Title = "Auto Haki",
+    Desc = "เปิด Buso Haki อัตโนมัติ",
+    Default = true,
+    Callback = function(v) _G.AUTOHAKI = v end
+})
+
 Window:Notify({
     Title = "PIG HUB",
-    Description = "โหลดสำเร็จ!",
+    Description = "Auto Farm โหลดสำเร็จ!",
     Duration = 4,
 })
