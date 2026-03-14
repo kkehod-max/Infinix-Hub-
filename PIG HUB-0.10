@@ -394,6 +394,60 @@ PlayerTab:Toggle({
         end
     end
 })
+PlayerTab:Section({Title="ดูเของ"})
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local CLIENT_ZONE_SIZE = Vector3.new(120, 14, 120)
+local SERVER_FAKE_RADIUS = 2000
+local MAGNET_SPEED = 0.8
+
+local remoteGet = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Get")
+
+local function resizeZones()
+    for _, item in pairs(workspace.DroppedItems:GetChildren()) do
+        local zone = item:FindFirstChild("PickUpZone")
+        if zone and zone:IsA("BasePart") then
+            zone.Size = CLIENT_ZONE_SIZE
+            zone.Transparency = 1
+            zone.CanCollide = false
+            zone.Anchored = true
+        end
+    end
+end
+
+resizeZones()
+workspace.DroppedItems.ChildAdded:Connect(resizeZones)
+
+RunService.Heartbeat:Connect(function()
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    for _, item in pairs(workspace.DroppedItems:GetChildren()) do
+        local prompt = item:FindFirstChildWhichIsA("ProximityPrompt", true)
+        if not prompt then continue end
+
+        local dist = (hrp.Position - item.Position).Magnitude
+
+        if dist <= SERVER_FAKE_RADIUS then
+            remoteGet:InvokeServer("pickup_dropped_item", item)
+
+            if item:IsA("BasePart") then
+                item.CFrame = item.CFrame:Lerp(CFrame.new(hrp.Position), MAGNET_SPEED)
+            else
+                local part = item:FindFirstChildWhichIsA("BasePart")
+                if part then
+                    part.CFrame = part.CFrame:Lerp(CFrame.new(hrp.Position), MAGNET_SPEED)
+                end
+            end
+        end
+    end
+end
+
 -- SILENT AIMกากๆเวอร์ชั่น0.10
 getgenv().SilentAimEnabled = false
 getgenv().FOV_Radius = 200
