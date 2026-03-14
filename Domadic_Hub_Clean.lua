@@ -4682,6 +4682,93 @@ end)
         _G.NotDeley = value
     end)      
     
+-- ===== FAST ATTACK (Fixed) =====
+-- Remote setup
+local _FA_rs      = game:GetService("ReplicatedStorage")
+local _FA_modules = _FA_rs:FindFirstChild("Modules")
+local _FA_net     = _FA_modules and _FA_modules:FindFirstChild("Net")
+local _FA_RegAtk  = _FA_net and _FA_net:FindFirstChild("RE/RegisterAttack")
+local _FA_RegHit  = _FA_net and _FA_net:FindFirstChild("RE/RegisterHit")
+
+local _FA_EnemyFolder = workspace:FindFirstChild("Enemies")
+local _FA_CharFolder  = workspace:FindFirstChild("Characters")
+local _FA_Distance    = 150
+
+local function _FA_IsAlive(char)
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    return hum and hum.Health > 0
+end
+
+local function _FA_AttackPart(part)
+    if not part then return end
+    local plr = game:GetService("Players").LocalPlayer
+    if plr:DistanceFromCharacter(part.Position) > _FA_Distance then return end
+    pcall(function()
+        if _FA_RegAtk then _FA_RegAtk:FireServer(0) end
+        if _FA_RegHit  then _FA_RegHit:FireServer(part, {part}) end
+    end)
+end
+
+local function _FA_AttackNearest()
+    -- ตีมอนสเตอร์
+    if _FA_EnemyFolder then
+        for _, enemy in ipairs(_FA_EnemyFolder:GetChildren()) do
+            local root  = enemy:FindFirstChild("HumanoidRootPart")
+            local torso = enemy:FindFirstChild("UpperTorso") or enemy:FindFirstChild("Torso")
+            local hum   = enemy:FindFirstChildOfClass("Humanoid")
+            if root and torso and hum and hum.Health > 0 then
+                local dist = game:GetService("Players").LocalPlayer:DistanceFromCharacter(root.Position)
+                if dist < _FA_Distance then
+                    _FA_AttackPart(torso)
+                end
+            end
+        end
+    end
+    -- ตีผู้เล่น (PvP)
+    if _FA_CharFolder then
+        local plr = game:GetService("Players").LocalPlayer
+        for _, char in ipairs(_FA_CharFolder:GetChildren()) do
+            if char ~= plr.Character then
+                local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+                if torso then
+                    _FA_AttackPart(torso)
+                end
+            end
+        end
+    end
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.05) -- ~20 hits/sec ปรับได้
+        if not _G.FastAttack then task.wait(0.5) continue end
+
+        local plr  = game:GetService("Players").LocalPlayer
+        local char = plr and plr.Character
+        if not char then continue end
+        if not _FA_IsAlive(char) then continue end
+
+        local tool = char:FindFirstChildOfClass("Tool")
+        if not tool then continue end
+
+        _FA_AttackNearest()
+    end
+end)
+
+-- Super Fast (No Delay) — RenderStepped
+spawn(function()
+    game:GetService("RunService").RenderStepped:Connect(function()
+        if not _G.NotDeley then return end
+        local plr  = game:GetService("Players").LocalPlayer
+        local char = plr and plr.Character
+        if not char then return end
+        if not _FA_IsAlive(char) then return end
+        if not char:FindFirstChildOfClass("Tool") then return end
+        _FA_AttackNearest()
+    end)
+end)
+
+-- compat: keep y/CameraShaker pcall so old AttackHit still won't crash
 pcall(function()
     CameraShaker = require(game.ReplicatedStorage.Util.CameraShaker)
 end)
