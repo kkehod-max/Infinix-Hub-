@@ -695,26 +695,57 @@ ServerTab:Button({
     end
 })
 CustomTab:Section({Title="Custom FOV"})
-local customFOVValue = 200
-CustomTab:Slider({
-    Title = "Custom FOV Size",
-    Desc = "ปรับขนาด FOV วงเล็ง (override ค่าจาก PVP Tab)",
-    Step = 5,
-    Value = {Min = 30, Max = 600, Default = 200},
+getgenv().CustomFOVCode = ""
+CustomTab:Input({
+    Title = "ใส่โค้ด FOV",
+    Desc = "วางสคริปหน้าตา FOV แล้วกดยืนยัน",
+    Placeholder = "วางโค้ด FOV ที่นี่...",
     Callback = function(v)
-        customFOVValue = v
+        getgenv().CustomFOVCode = v
     end
 })
 CustomTab:Button({
     Title = "ยืนยัน Custom FOV",
-    Desc = "กดเพื่อใช้ค่า FOV ที่ตั้งไว้ด้านบน",
+    Desc = "กดเพื่อใช้โค้ด FOV ที่ใส่ไว้",
     Callback = function()
-        getgenv().FOV_Radius = customFOVValue
-        game:GetService("StarterGui"):SetCore("SendNotification", {
-            Title = "Custom FOV",
-            Text = "เปลี่ยน FOV เป็น " .. customFOVValue .. " สำเร็จ!",
-            Duration = 3
-        })
+        local code = getgenv().CustomFOVCode or ""
+        if code == "" then
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Custom FOV",
+                Text = "กรุณาใส่โค้ด FOV ก่อน / Please enter FOV code first",
+                Duration = 3
+            })
+            return
+        end
+        local isFOVCode = code:find("FOV_Radius") or code:find("FOVRadius") or code:find("Drawing") or code:find("Circle") or code:find("Radius") or code:find("Lines")
+        if not isFOVCode then
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Custom FOV",
+                Text = "นี่ไม่ใช่โค้ด FOV / This is not a FOV code",
+                Duration = 4
+            })
+            return
+        end
+        local ok, err = pcall(function()
+            for i = 1, 8 do
+                if Lines[i] then Lines[i]:Remove() end
+            end
+            Lines = {}
+            loadstring(code)()
+        end)
+        if ok then
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Custom FOV",
+                Text = "เปลี่ยนหน้าตา FOV สำเร็จ! / FOV changed successfully!",
+                Duration = 3
+            })
+        else
+            game:GetService("StarterGui"):SetCore("SendNotification", {
+                Title = "Custom FOV",
+                Text = "โค้ดผิดพลาด / Code error: " .. tostring(err):sub(1,50),
+                Duration = 5
+            })
+        end
     end
 })
 CustomTab:Section({Title="Custom Silent Aim"})
@@ -753,15 +784,7 @@ CustomTab:Slider({
         getgenv().BulletForce = v
     end
 })
-CustomTab:Slider({
-    Title = "Custom FOV Radius (ปรับจาก Custom Tab)",
-    Desc = "ปรับขนาดวงเล็งได้โดยตรง",
-    Step = 5,
-    Value = {Min = 30, Max = 600, Default = 200},
-    Callback = function(v)
-        getgenv().FOV_Radius = v
-    end
-})
+
 RunService.Heartbeat:Connect(function()
     if getgenv().StraightBullet and getgenv().SilentAimEnabled and getgenv().CurrentTargetHead then
         local head = getgenv().CurrentTargetHead
@@ -770,7 +793,7 @@ RunService.Heartbeat:Connect(function()
         end
     end
 end)
-CustomTab:Section({Title="ดูของที่ตกอยู่ที่พื้น"})
+ESPTab:Section({Title="ดูของที่ตกอยู่ที่พื้น"})
 getgenv().ItemESPEnabled = false
 getgenv().ItemESPMaxDist = 500
 local ItemESPDrawings = {}
@@ -849,7 +872,7 @@ task.spawn(function()
         end
     end
 end)
-CustomTab:Toggle({
+ESPTab:Toggle({
     Title = "Item ESP (ดูของบนพื้น)",
     Desc = "แสดงชื่อและระยะของไอเท็มที่ตกอยู่บนพื้น (สว่างกว่าถ้าอยู่ใน FOV)",
     Default = false,
@@ -857,7 +880,7 @@ CustomTab:Toggle({
         getgenv().ItemESPEnabled = v
     end
 })
-CustomTab:Slider({
+ESPTab:Slider({
     Title = "Item ESP Distance",
     Desc = "ระยะที่จะแสดง Item ESP (เมตร)",
     Step = 25,
