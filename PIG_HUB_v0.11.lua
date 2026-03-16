@@ -1,17 +1,14 @@
 local CoreGui = game:GetService("CoreGui")
 local TweenService = game:GetService("TweenService")
-
 local DownloadGui = Instance.new("ScreenGui")
 DownloadGui.Name = "PigHubLoad"
 DownloadGui.Parent = CoreGui
 DownloadGui.ResetOnSpawn = false
 DownloadGui.IgnoreGuiInset = true
-
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(1, 0, 1, 0)
 MainFrame.BackgroundTransparency = 1
 MainFrame.Parent = DownloadGui
-
 local CharImage = Instance.new("ImageLabel")
 CharImage.Size = UDim2.new(0, 300, 0, 300)
 CharImage.Position = UDim2.new(0.5, -150, 0.5, -170)
@@ -19,7 +16,6 @@ CharImage.BackgroundTransparency = 1
 CharImage.Image = "rbxassetid://117924028123190"
 CharImage.ImageTransparency = 1
 CharImage.Parent = MainFrame
-
 local CampName = Instance.new("TextLabel")
 CampName.Size = UDim2.new(1, 0, 0, 70)
 CampName.Position = UDim2.new(0, 0, 0.5, 140)
@@ -30,7 +26,6 @@ CampName.TextScaled = true
 CampName.Font = Enum.Font.GothamBold
 CampName.TextTransparency = 1
 CampName.Parent = MainFrame
-
 local Gradient = Instance.new("UIGradient")
 Gradient.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 150, 255)),
@@ -39,7 +34,6 @@ Gradient.Color = ColorSequence.new({
 })
 Gradient.Rotation = 45
 Gradient.Parent = CampName
-
 task.spawn(function()
     local fadeInImage = TweenService:Create(CharImage, TweenInfo.new(1.5), {ImageTransparency = 0})
     fadeInImage:Play()
@@ -67,7 +61,6 @@ task.spawn(function()
     DownloadGui:Destroy()
 end)
 repeat task.wait() until not CoreGui:FindFirstChild("PigHubLoad")
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -76,13 +69,10 @@ local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
-
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 local Camera = workspace.CurrentCamera
-
 local WindUI = loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
-
 local Window = WindUI:CreateWindow({
     Title = "PIG HUB",
     Icon = "rbxassetid://81857105973850",
@@ -103,13 +93,10 @@ local Window = WindUI:CreateWindow({
         Image = "rbxthumb://type=AvatarHeadShot&id=" .. LocalPlayer.UserId
     }
 })
-
 Window:EditOpenButton({ Enabled = false })
-
 local ScreenGui = Instance.new("ScreenGui", CoreGui)
 ScreenGui.Name = "WindUI_Toggle"
 ScreenGui.ResetOnSpawn = false
-
 local ToggleBtn = Instance.new("ImageButton", ScreenGui)
 ToggleBtn.Size = UDim2.new(0,50,0,50)
 ToggleBtn.Position = UDim2.new(0,20,0.5,-25)
@@ -117,7 +104,6 @@ ToggleBtn.BackgroundTransparency = 1
 ToggleBtn.Image = "rbxassetid://81857105973850"
 ToggleBtn.Active = true
 ToggleBtn.Draggable = true
-
 local function ToggleUI()
     if Window.Toggle then
         Window:Toggle()
@@ -125,32 +111,27 @@ local function ToggleUI()
         Window.UI.Enabled = not Window.UI.Enabled
     end
 end
-
 ToggleBtn.MouseButton1Click:Connect(ToggleUI)
 UserInputService.InputBegan:Connect(function(i,gp)
     if not gp and i.KeyCode == Enum.KeyCode.T then
         ToggleUI()
     end
 end)
-
 local PlayerTab = Window:Tab({Title="Player",Icon="user"})
 local ESPTab = Window:Tab({Title="ESP",Icon="crosshair"})
 local PVPTab = Window:Tab({Title="PVP",Icon="target"})
 local QuestTab = Window:Tab({Title="Quest",Icon="flag"})
 local ServerTab = Window:Tab({Title="Server",Icon="globe"})
 local CustomTab = Window:Tab({Title="Custom",Icon="settings"})
-
 PlayerTab:Section({Title="Player Stats"})
 local BankBalance = PlayerTab:Button({Title="Bank Balance",Desc="<b><font color='#1E90FF'>$0</font></b>"})
 local HandBalance = PlayerTab:Button({Title="Hand Balance",Desc="<b><font color='#00BFFF'>$0</font></b>"})
-
 local function formatMoney(amount)
     amount = tonumber(amount) or 0
     if amount >= 1000000 then return string.format("$%.1fM", amount/1000000)
     elseif amount >= 1000 then return string.format("$%.1fK", amount/1000)
     else return string.format("$%d", amount) end
 end
-
 local function HandMoney()
     local success, value = pcall(function()
         local PlayerGui = LocalPlayer:FindFirstChild("PlayerGui")
@@ -166,7 +147,6 @@ local function HandMoney()
     end)
     return success and value or 0
 end
-
 local function ATMMoney()
     local success, value = pcall(function()
         for _, v in ipairs(PlayerGui:GetDescendants()) do
@@ -178,24 +158,20 @@ local function ATMMoney()
     end)
     return success and value or 0
 end
-
 task.spawn(function()
     while task.wait(0.5) do
         BankBalance:SetDesc('<b><font color="#1E90FF">' .. formatMoney(ATMMoney()) .. "</font></b>")
         HandBalance:SetDesc('<b><font color="#00BFFF">' .. formatMoney(HandMoney()) .. "</font></b>")
     end
 end)
-
 PlayerTab:Section({Title="ซ่อนชื่อและเลเวล"})
 PlayerTab:Button({Title="เปิดใช้ระบบ", Desc="คลิกเพื่อเปิดระบบซ่อนชื่อและเลเวล", Callback = function()
     loadstring(game:HttpGet("https://pastefy.app/3BxE2aGP/raw",true))()
 end})
 PlayerTab:Section({Title="ANTI-LOOK SYSTEM"})
-
 local AntiLookEnabled = false
 local AntiLookHeight = 1500
 local AntiLookConnection = nil
-
 local function ToggleAntiLook(state)
     AntiLookEnabled = state
     
@@ -230,7 +206,6 @@ local function ToggleAntiLook(state)
         end
     end
 end
-
 PlayerTab:Toggle({
     Title = "Anti-Look",
     Desc = "ป้องกันการล็อคเป้า",
@@ -239,7 +214,6 @@ PlayerTab:Toggle({
         ToggleAntiLook(v)
     end
 })
-
 PlayerTab:Slider({
     Title = "Anti-Look Height",
     Desc = "ปรับความสูง 500-3000",
@@ -249,12 +223,10 @@ PlayerTab:Slider({
         AntiLookHeight = v
     end
 })
-
 PlayerTab:Section({Title="Sit System"})
 local sit=false
 local sitHeight=0
 local sitConn
-
 PlayerTab:Toggle({
     Title="เก็บของใต้ดิน",
     Callback=function(v)
@@ -273,19 +245,16 @@ PlayerTab:Toggle({
         end
     end
 })
-
 PlayerTab:Slider({
     Title="ปรับ Height",
     Step=0.1,
     Value={Min=-5,Max=4,Default=0},
     Callback=function(v) sitHeight=v end
 })
-
 PlayerTab:Section({Title="Jump power"})
 local infJump=false
 local jumpPower=70
 local jumpConn
-
 PlayerTab:Toggle({
     Title="Jump power",
     Callback=function(v)
@@ -306,17 +275,14 @@ PlayerTab:Toggle({
         end
     end
 })
-
 PlayerTab:Slider({
     Title="Jump Power",
     Step=5,
     Value={Min=20,Max=100,Default=70},
     Callback=function(v) jumpPower=v end
 })
-
 PlayerTab:Section({Title="Warp Walk"})
 local warpEnabled, warpDistance, warpSpeed, lastWarp, warpConnection = false, 0.5, 0.1, 0
-
 PlayerTab:Toggle({
     Title="Enable Warp",
     Callback=function(v)
@@ -338,26 +304,21 @@ PlayerTab:Toggle({
         end
     end
 })
-
 PlayerTab:Slider({
     Title="Warp Distance",
     Step=0.1,
     Value={Min=0.1,Max=0.9,Default=0.9},
     Callback=function(v) warpDistance = tonumber(v) or 0.5 end
 })
-
 PlayerTab:Slider({
     Title="Warp Speed",
     Step=0.01,
     Value={Min=0.01,Max=0.09,Default=0.09},
     Callback=function(v) warpSpeed = tonumber(v) or 0.1 end
 })
-
 PlayerTab:Section({Title="Infinite Stamina"})
-
 local Net = require(ReplicatedStorage.Modules.Core.Net)
 local SprintModule = require(ReplicatedStorage.Modules.Game.Sprint)
-
 PlayerTab:Toggle({
     Title = "Infinite Stamina",
     Default = false,
@@ -371,15 +332,12 @@ PlayerTab:Toggle({
             end
             
             repeat task.wait() until getgenv().Bypassed
-
             RunService.Heartbeat:Connect(function()
                 Net.send("set_sprinting_1",true)
             end)
-
             local consume_stamina = SprintModule.consume_stamina
             local SprintBar = debug.getupvalue(consume_stamina, 2).sprint_bar
             local __InfiniteStamina = SprintBar.update
-
             SprintBar.update = function(...)
                 if getgenv().InfiniteStamina then
                     return __InfiniteStamina(function()
@@ -400,13 +358,10 @@ local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local CLIENT_ZONE_SIZE = Vector3.new(120, 14, 120)
 local SERVER_FAKE_RADIUS = 2000
 local MAGNET_SPEED = 0.8
-
 local remoteGet = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Get")
-
 local function resizeZones()
     for _, item in pairs(workspace.DroppedItems:GetChildren()) do
         local zone = item:FindFirstChild("PickUpZone")
@@ -418,25 +373,19 @@ local function resizeZones()
         end
     end
 end
-
 resizeZones()
 workspace.DroppedItems.ChildAdded:Connect(resizeZones)
-
 RunService.Heartbeat:Connect(function()
     local char = LocalPlayer.Character
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if not hrp then return end
-
     for _, item in pairs(workspace.DroppedItems:GetChildren()) do
         local prompt = item:FindFirstChildWhichIsA("ProximityPrompt", true)
         if not prompt then continue end
-
         local dist = (hrp.Position - item.Position).Magnitude
-
         if dist <= SERVER_FAKE_RADIUS then
             remoteGet:InvokeServer("pickup_dropped_item", item)
-
             if item:IsA("BasePart") then
                 item.CFrame = item.CFrame:Lerp(CFrame.new(hrp.Position), MAGNET_SPEED)
             else
@@ -447,47 +396,36 @@ RunService.Heartbeat:Connect(function()
             end
         end
     end
-end
-
--- SILENT AIMกากๆเวอร์ชั่น0.10
+end)
 getgenv().SilentAimEnabled = false
 getgenv().FOV_Radius = 200
 getgenv().AimPart = "Head"
 getgenv().Prediction = 0.165
 getgenv().RGB_Speed = 1
-
 local i = ReplicatedStorage:WaitForChild("Remotes")
 local send = i:WaitForChild("Send")
-
 local Lines = {}
 for i = 1, 8 do
     Lines[i] = Drawing.new("Line")
     Lines[i].Visible = true
     Lines[i].Thickness = 2
 end
-
 local ScreenTracer = Drawing.new("Line")
 ScreenTracer.Thickness = 1.5
 ScreenTracer.Transparency = 0.8
 ScreenTracer.Visible = false
-
--- ตัวแปรตรวจจับการยิงกากๆ
 local isFiring = false
 local lastBeamTime = 0
 local beamCooldown = 0.15
-
 UserInputService.InputBegan:Connect(function(input, gp)
     if not gp and input.UserInputType == Enum.UserInputType.MouseButton1 then
         isFiring = true
-
         task.spawn(function()
             task.wait(0.1)
             isFiring = false
         end)
     end
 end)
-
--- ตรวจจับการกนด
 UserInputService.TouchStarted:Connect(function(input, gp)
     if not gp then
         isFiring = true
@@ -497,11 +435,8 @@ UserInputService.TouchStarted:Connect(function(input, gp)
         end)
     end
 end)
-
 local function CreateBulletBeam(startPos, endPos)
-    -- ดสดสส
     if not isFiring then return end
-
     if tick() - lastBeamTime < beamCooldown then
         return
     end
@@ -526,12 +461,10 @@ local function CreateBulletBeam(startPos, endPos)
     t:Play()
     game:GetService("Debris"):AddItem(p, 0.5)
 end
-
 local function GetClosestTarget()
     local target = nil
     local shortestDist = getgenv().FOV_Radius
     local center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-
     for _, v in pairs(Players:GetPlayers()) do
         if v ~= LocalPlayer and v.Character and v.Character:FindFirstChild("Humanoid") then
             if v.Character.Humanoid.Health > 0 then
@@ -551,7 +484,6 @@ local function GetClosestTarget()
     end
     return target
 end
-
 RunService.RenderStepped:Connect(function()
     local Center = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
     local Time = tick() * getgenv().RGB_Speed
@@ -564,7 +496,6 @@ RunService.RenderStepped:Connect(function()
         Lines[i].Color = Color3.fromHSV((Time + (i / 8)) % 1, 1, 1)
         Lines[i].Visible = getgenv().SilentAimEnabled
     end
-
     if getgenv().SilentAimEnabled then
         local targetPlayer = GetClosestTarget()
         if targetPlayer then
@@ -592,7 +523,6 @@ RunService.RenderStepped:Connect(function()
         getgenv().FinalAimPos = nil
     end
 end)
-
 local oldFire
 oldFire = hookfunction(send.FireServer, function(self, ...)
     local args = {...}
@@ -600,9 +530,7 @@ oldFire = hookfunction(send.FireServer, function(self, ...)
     if getgenv().SilentAimEnabled and getgenv().CurrentTargetHead and getgenv().FinalAimPos then
         local origin = (LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Head")) and LocalPlayer.Character.Head.Position or Vector3.new(0,0,0)
         
-        -- สร้างลำแสงเฉพาะตอนยิงจริง
         CreateBulletBeam(origin, getgenv().FinalAimPos)
-
         args[4] = CFrame.new(1/0, 1/0, 1/0, 0/0, 0/0, 0/0, 0/0, 0/0, 0/0, 0/0, 0/0, 0/0)
         args[5] = {
             [1] = {
@@ -616,7 +544,6 @@ oldFire = hookfunction(send.FireServer, function(self, ...)
     
     return oldFire(self, unpack(args))
 end)
-
 PVPTab:Toggle({
     Title = "Silent Aim",
     Default = false,
@@ -629,7 +556,6 @@ PVPTab:Toggle({
         end
     end
 })
-
 PVPTab:Slider({
     Title = "FOV Radius",
     Desc = "ปรับขนาดวงเล็ง",
@@ -639,7 +565,6 @@ PVPTab:Slider({
         getgenv().FOV_Radius = v
     end
 })
-
 PVPTab:Dropdown({
     Title = "Aim Part",
     Desc = "เลือกส่วนที่ต้องการเล็ง",
@@ -649,7 +574,6 @@ PVPTab:Dropdown({
         getgenv().AimPart = v
     end
 })
-
 PVPTab:Slider({
     Title = "Prediction",
     Desc = "ความแม่นยำ 0.1-0.2",
@@ -659,8 +583,6 @@ PVPTab:Slider({
         getgenv().Prediction = v
     end
 })
-
--- สกสกส
 PVPTab:Slider({
     Title = "Beam Cooldown",
     Desc = "ระยะห่างลำแสง (ms)",
@@ -670,7 +592,6 @@ PVPTab:Slider({
         beamCooldown = v / 1000
     end
 })
-
 local function findCounterTable()
     if not getgc then return nil end
     
@@ -683,7 +604,6 @@ local function findCounterTable()
     end
     return nil
 end
-
 local function createNetwork()
     local CounterTable = findCounterTable()
     if not CounterTable then return nil end
@@ -704,7 +624,6 @@ local function createNetwork()
     
     return Net
 end
-
 QuestTab:Button({
     Title = "Clear All Quests",
     Desc = "เคลียร์เควสทั้งหมด",
@@ -752,11 +671,9 @@ QuestTab:Button({
         end)
     end
 })
-
 ESPTab:Toggle({Title="ESP Box",Callback=function(v) if v then loadstring(game:HttpGet("https://pastefy.app/IAJ3EjEo/raw"))() end end})
 ESPTab:Toggle({Title="ESP Name",Callback=function(v) if v then loadstring(game:HttpGet("https://pastefy.app/uEpm8OT7/raw"))() end end})
 ESPTab:Toggle({Title="ESP Item",Callback=function(v) if v then loadstring(game:HttpGet("https://pastefy.app/uAhJQuzj/raw"))() end end})
-
 ServerTab:Button({
     Title="Server Hop",
     Callback=function()
@@ -771,21 +688,14 @@ ServerTab:Button({
         end
     end
 })
-
 ServerTab:Button({
     Title="Rejoin",
     Callback=function()
         TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId)
     end
 })
-
--- ==================== CUSTOM TAB ====================
-
--- ---- Custom FOV ----
 CustomTab:Section({Title="Custom FOV"})
-
 local customFOVValue = 200
-
 CustomTab:Slider({
     Title = "Custom FOV Size",
     Desc = "ปรับขนาด FOV วงเล็ง (override ค่าจาก PVP Tab)",
@@ -795,7 +705,6 @@ CustomTab:Slider({
         customFOVValue = v
     end
 })
-
 CustomTab:Button({
     Title = "ยืนยัน Custom FOV",
     Desc = "กดเพื่อใช้ค่า FOV ที่ตั้งไว้ด้านบน",
@@ -808,13 +717,9 @@ CustomTab:Button({
         })
     end
 })
-
--- ---- Custom Silent Aim ----
 CustomTab:Section({Title="Custom Silent Aim"})
-
 getgenv().BulletForce = 1.0
 getgenv().StraightBullet = false
-
 CustomTab:Toggle({
     Title = "Straight Bullet (กระสุนตรง)",
     Desc = "บังคับให้กระสุนยิงตรงไปยังเป้าหมายเสมอ",
@@ -830,7 +735,6 @@ CustomTab:Toggle({
         end
     end
 })
-
 CustomTab:Slider({
     Title = "Custom Prediction (ความแม่นยำ)",
     Desc = "ปรับความแม่นยำ Silent Aim (0.05 = แม่น / 0.3 = กว้าง)",
@@ -840,7 +744,6 @@ CustomTab:Slider({
         getgenv().Prediction = v
     end
 })
-
 CustomTab:Slider({
     Title = "Bullet Force (แรงดีดกระสุน)",
     Desc = "ปรับแรง offset กระสุน (1.0 = ปกติ, สูง = ดีดแรง)",
@@ -850,7 +753,6 @@ CustomTab:Slider({
         getgenv().BulletForce = v
     end
 })
-
 CustomTab:Slider({
     Title = "Custom FOV Radius (ปรับจาก Custom Tab)",
     Desc = "ปรับขนาดวงเล็งได้โดยตรง",
@@ -860,25 +762,17 @@ CustomTab:Slider({
         getgenv().FOV_Radius = v
     end
 })
-
--- Patch hookfunction ให้รองรับ BulletForce และ StraightBullet
--- (override getgenv().FinalAimPos ก่อนยิง)
 RunService.Heartbeat:Connect(function()
     if getgenv().StraightBullet and getgenv().SilentAimEnabled and getgenv().CurrentTargetHead then
         local head = getgenv().CurrentTargetHead
         if head and head.Parent then
-            -- Straight Bullet: ใช้ Position ตรงๆ + BulletForce เป็น multiplier ของ Prediction
             getgenv().FinalAimPos = head.Position + (head.Velocity * (getgenv().Prediction * getgenv().BulletForce))
         end
     end
 end)
-
--- ---- ดูของที่ตกอยู่ที่พื้น (Item ESP ใน FOV Circle) ----
 CustomTab:Section({Title="ดูของที่ตกอยู่ที่พื้น"})
-
 getgenv().ItemESPEnabled = false
 getgenv().ItemESPMaxDist = 500
-
 local ItemESPDrawings = {}
 local RarityColors = {
     Common    = Color3.fromRGB(255, 255, 255),
@@ -888,7 +782,6 @@ local RarityColors = {
     Legendary = Color3.fromRGB(255, 150, 0),
     Omega     = Color3.fromRGB(255, 0, 50)
 }
-
 local function UpdateItemESP()
     if not getgenv().ItemESPEnabled then
         for _, draw in pairs(ItemESPDrawings) do
@@ -897,32 +790,25 @@ local function UpdateItemESP()
         end
         return
     end
-
     local dropped = workspace:FindFirstChild("DroppedItems")
     if not dropped then return end
-
     local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myRoot then return end
-
     local fovCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
-
     for _, item in ipairs(dropped:GetChildren()) do
         if item:IsA("Model") and item:FindFirstChild("PickUpZone") then
             local pz = item.PickUpZone
             local pos, onScreen = Camera:WorldToViewportPoint(pz.Position)
             local dist = (myRoot.Position - pz.Position).Magnitude
-
             if not ItemESPDrawings[item] then
                 ItemESPDrawings[item] = {
                     Dot   = Drawing.new("Circle"),
                     Label = Drawing.new("Text")
                 }
             end
-
             local draw = ItemESPDrawings[item]
             local screenPos = Vector2.new(pos.X, pos.Y)
             local inFOV = (screenPos - fovCenter).Magnitude <= getgenv().FOV_Radius
-
             if onScreen and dist < getgenv().ItemESPMaxDist then
                 local color = Color3.new(1,1,1)
                 local ok, template = pcall(function()
@@ -931,15 +817,12 @@ local function UpdateItemESP()
                 if ok and template then
                     color = RarityColors[template:GetAttribute("RarityName")] or color
                 end
-
-                -- วงขนาดใหญ่ขึ้นถ้าอยู่ใน FOV
                 draw.Dot.Visible = true
                 draw.Dot.Position = screenPos
                 draw.Dot.Radius = inFOV and 6 or 3
                 draw.Dot.Color = color
                 draw.Dot.Filled = true
                 draw.Dot.Transparency = inFOV and 1 or 0.5
-
                 draw.Label.Visible = true
                 draw.Label.Position = Vector2.new(pos.X, pos.Y - 18)
                 draw.Label.Text = string.format("%s [%dm]", item.Name, math.floor(dist))
@@ -954,9 +837,7 @@ local function UpdateItemESP()
         end
     end
 end
-
 RunService.RenderStepped:Connect(UpdateItemESP)
-
 task.spawn(function()
     while task.wait(1) do
         for item, draw in pairs(ItemESPDrawings) do
@@ -968,7 +849,6 @@ task.spawn(function()
         end
     end
 end)
-
 CustomTab:Toggle({
     Title = "Item ESP (ดูของบนพื้น)",
     Desc = "แสดงชื่อและระยะของไอเท็มที่ตกอยู่บนพื้น (สว่างกว่าถ้าอยู่ใน FOV)",
@@ -977,7 +857,6 @@ CustomTab:Toggle({
         getgenv().ItemESPEnabled = v
     end
 })
-
 CustomTab:Slider({
     Title = "Item ESP Distance",
     Desc = "ระยะที่จะแสดง Item ESP (เมตร)",
