@@ -784,61 +784,28 @@ ServerTab:Button({
 -- ---- Custom FOV ----
 CustomTab:Section({Title="Custom FOV"})
 
-local currentFOVCode = ""
-local fovInput = CustomTab:Input({
-    Title = "ใส่โค้ด FOV",
-    Desc = "วางโค้ด FOV หรือตัวเลข FOV แล้วกดยืนยัน",
-    Placeholder = "เช่น: 200 หรือวางโค้ดที่นี่",
-    ClearOnFocus = false,
+local customFOVValue = 200
+
+CustomTab:Slider({
+    Title = "Custom FOV Size",
+    Desc = "ปรับขนาด FOV วงเล็ง (override ค่าจาก PVP Tab)",
+    Step = 5,
+    Value = {Min = 30, Max = 600, Default = 200},
     Callback = function(v)
-        currentFOVCode = v
+        customFOVValue = v
     end
 })
 
 CustomTab:Button({
-    Title = "✅ ยืนยัน Custom FOV",
-    Desc = "กดเพื่อใช้งาน FOV ที่ตั้งค่าไว้",
+    Title = "ยืนยัน Custom FOV",
+    Desc = "กดเพื่อใช้ค่า FOV ที่ตั้งไว้ด้านบน",
     Callback = function()
-        local code = currentFOVCode
-        if code == "" then
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "Custom FOV",
-                Text = "❌ กรุณาใส่โค้ดหรือตัวเลข FOV ก่อน",
-                Duration = 3
-            })
-            return
-        end
-
-        -- ลองแปลงเป็นตัวเลขตรงๆ ก่อน
-        local numVal = tonumber(code)
-        if numVal then
-            getgenv().FOV_Radius = numVal
-            -- อัปเดต Lines ทุกเส้นให้ใช้ Radius ใหม่ทันที
-            game:GetService("StarterGui"):SetCore("SendNotification", {
-                Title = "Custom FOV",
-                Text = "✅ เปลี่ยน FOV เป็น " .. numVal .. " สำเร็จ!",
-                Duration = 3
-            })
-        else
-            -- ถ้าไม่ใช่ตัวเลข ให้ลองรัน loadstring
-            local ok, err = pcall(function()
-                local fn = loadstring(code)
-                if fn then fn() end
-            end)
-            if ok then
-                game:GetService("StarterGui"):SetCore("SendNotification", {
-                    Title = "Custom FOV",
-                    Text = "✅ โหลดโค้ด FOV สำเร็จ!",
-                    Duration = 3
-                })
-            else
-                game:GetService("StarterGui"):SetCore("SendNotification", {
-                    Title = "Custom FOV",
-                    Text = "❌ โค้ดผิดพลาด: " .. tostring(err),
-                    Duration = 5
-                })
-            end
-        end
+        getgenv().FOV_Radius = customFOVValue
+        game:GetService("StarterGui"):SetCore("SendNotification", {
+            Title = "Custom FOV",
+            Text = "เปลี่ยน FOV เป็น " .. customFOVValue .. " สำเร็จ!",
+            Duration = 3
+        })
     end
 })
 
