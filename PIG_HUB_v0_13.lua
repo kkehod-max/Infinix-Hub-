@@ -194,23 +194,17 @@ end
 
 -- hook network packet ที่ส่งตำแหน่งตัวละครไป server
 -- Roblox ส่ง position ผ่าน physics replication — เราแตะ CFrame ชั่วคราว 1 frame แล้ว restore
-local antiLookRestoreConn = nil
-local antiLookRealCF = nil
-
 local function ToggleAntiLook(state)
-    AntiLookEnabled = state
+    -- ปิด connection เก่าก่อนเสมอ (ใช้ชื่อตัวแปรให้ตรง)
+    AntiLookEnabled = false
+    if AntiLookConnection then AntiLookConnection:Disconnect() AntiLookConnection = nil end
+    antiLookOffset = Vector3.new(0, 0, 0)
+    antiLookFlipTimer = 0
 
-    if antiLookConnection then antiLookConnection:Disconnect() antiLookConnection = nil end
-    if antiLookRestoreConn then antiLookRestoreConn:Disconnect() antiLookRestoreConn = nil end
+    if not state then return end
 
-    if not state then
-        antiLookOffset = Vector3.new(0, 0, 0)
-        return
-    end
+    AntiLookEnabled = true
 
-    -- ทุก Heartbeat: เก็บ CFrame จริง → เลื่อน HRP ชั่วคราว → รอ 1 frame → คืนค่า
-    -- Roblox physics replication ส่งตอน Heartbeat ดังนั้น server จะเห็น position ที่เลื่อนแล้ว
-    -- แต่ RenderStepped (ที่ client render) จะเห็น position จริง → ไม่กระตุก
     AntiLookConnection = RunService.Heartbeat:Connect(function(dt)
         if not AntiLookEnabled then return end
         local char = LocalPlayer.Character
@@ -219,22 +213,19 @@ local function ToggleAntiLook(state)
         local hum = char:FindFirstChild("Humanoid")
         if not hrp or not hum then return end
 
-        -- เปลี่ยน offset ทุก interval
         antiLookFlipTimer = antiLookFlipTimer + dt
         if antiLookFlipTimer >= antiLookFlipInterval then
             antiLookFlipTimer = 0
             antiLookOffset = newAntiLookOffset(AntiLookStrength)
         end
 
-        -- บันทึก CFrame จริง
         local realCF = hrp.CFrame
-
-        -- เลื่อน HRP ไปยัง ghost position (server จะเห็นอันนี้)
         hrp.CFrame = realCF + antiLookOffset
 
-        -- รอ 1 physics step แล้วคืนค่า (client render จะไม่เห็นการเปลี่ยน)
+        -- ใช้ตัวแปร local capture เพื่อกัน defer วิ่งหลังปิด
+        local enabled = AntiLookEnabled
         task.defer(function()
-            if hrp and hrp.Parent and AntiLookEnabled then
+            if hrp and hrp.Parent and enabled and AntiLookEnabled then
                 hrp.CFrame = realCF
             end
         end)
