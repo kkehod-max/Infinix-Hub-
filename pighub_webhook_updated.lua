@@ -398,50 +398,93 @@ PlayerTab:Button({Title="เปิดใช้ระบบ", Desc="คลิก�
 end})
 
 -- ============================================
--- ANTI-LOOK SYSTEM (คงไว้ แต่ลบ Slider)
+-- ANTI-LOOK SYSTEM (hookmetamethod edition)
 -- ============================================
+local AntiLookEnabled  = false
+local AntiLookStrength = 60
+local _alFakeOffset    = Vector3.new(0,0,0)
+local _alTimer         = 0
+local _alInterval      = 0.05
+local _alHRP           = nil
+local _alConnection    = nil
+local _alHook          = nil
+local _alCharConn      = nil
 
-local AntiLookEnabled = false
-local AntiLookStrength = 15  -- ค่าคงที่
-local AntiLookConnection = nil
-local antiLookOffset = Vector3.new(0, 0, 0)
-local antiLookFlipTimer = 0
-local antiLookFlipInterval = 0.06  -- ค่าคงที่
+local function _newFakeOffset(s)
+    local a  = math.random() * math.pi * 2
+    local hd = s * (0.8 + math.random() * 0.2)
+    local vd = s * (math.random() * 2 - 1)
+    return Vector3.new(math.cos(a)*hd, vd, math.sin(a)*hd)
+end
 
-local function newAntiLookOffset(strength)
-    local angle = math.random() * math.pi * 2
-    local hDist = strength * (0.7 + math.random() * 0.3)
-    local vDist = strength * (math.random() * 0.25)
-    return Vector3.new(math.cos(angle) * hDist, vDist, math.sin(angle) * hDist)
+local function _getHRP()
+    local char = LocalPlayer.Character
+    if not char then return nil end
+    return char:FindFirstChild("HumanoidRootPart")
+end
+
+local function _installHook()
+    if _alHook then return end
+    pcall(function()
+        local mt = getrawmetatable(game)
+        local oldIndex = mt.__index
+        makereadonly = makereadonly or function() end
+        setreadonly(mt, false)
+        mt.__index = newcclosure(function(self, key)
+            if AntiLookEnabled and _alHRP
+                and rawequal(self, _alHRP)
+                and key == "CFrame" then
+                local ok, cf = pcall(oldIndex, self, key)
+                if ok and cf then
+                    return cf + _alFakeOffset
+                end
+            end
+            return oldIndex(self, key)
+        end)
+        setreadonly(mt, true)
+        _alHook = true
+    end)
+end
+
+local function _removeHook()
+    -- hook ถูก override ไว้บน mt ตรงๆ ไม่ได้ใช้ hookmetamethod
+    -- ปิดโดยการ clear flag แทน ไม่ต้อง unhook
+    _alHook = nil
 end
 
 local function ToggleAntiLook(state)
     AntiLookEnabled = false
-    if AntiLookConnection then AntiLookConnection:Disconnect() AntiLookConnection = nil end
-    antiLookOffset = Vector3.new(0, 0, 0)
-    antiLookFlipTimer = 0
-    if not state then return end
+    if _alConnection then _alConnection:Disconnect() _alConnection = nil end
+    if _alCharConn then _alCharConn:Disconnect() _alCharConn = nil end
+    _alFakeOffset = Vector3.new(0,0,0)
+    _alTimer = 0
+    _alHRP = nil
+
+    if not state then
+        _removeHook()
+        return
+    end
+
+    _alHRP = _getHRP()
     AntiLookEnabled = true
-    AntiLookConnection = RunService.Heartbeat:Connect(function(dt)
+    _installHook()
+
+    _alConnection = RunService.Heartbeat:Connect(function(dt)
         if not AntiLookEnabled then return end
-        local char = LocalPlayer.Character
-        if not char then return end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChild("Humanoid")
-        if not hrp or not hum then return end
-        antiLookFlipTimer = antiLookFlipTimer + dt
-        if antiLookFlipTimer >= antiLookFlipInterval then
-            antiLookFlipTimer = 0
-            antiLookOffset = newAntiLookOffset(AntiLookStrength)
+        local hrp = _getHRP()
+        if not hrp then _alHRP = nil return end
+        _alHRP = hrp
+        _alTimer = _alTimer + dt
+        if _alTimer >= _alInterval then
+            _alTimer = 0
+            _alFakeOffset = _newFakeOffset(AntiLookStrength)
         end
-        local realCF = hrp.CFrame
-        hrp.CFrame = realCF + antiLookOffset
-        local enabled = AntiLookEnabled
-        task.defer(function()
-            if hrp and hrp.Parent and enabled and AntiLookEnabled then
-                hrp.CFrame = realCF
-            end
-        end)
+    end)
+
+    _alCharConn = LocalPlayer.CharacterAdded:Connect(function(char)
+        if not AntiLookEnabled then return end
+        task.wait(1)
+        _alHRP = char:FindFirstChild("HumanoidRootPart")
     end)
 end
 
