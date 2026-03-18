@@ -172,85 +172,234 @@ end})
 
 PlayerTab:Section({Title="ANTI-LOOK SYSTEM"})
 -- ถภสรยงศซศฐญขฅฆฉชซฌญฎฏฐ
--- Anti-Look v2 — CFrame ghost offset ฝั่ง server เท่านั้น
--- client เห็นตัวเองอยู่ที่เดิม animation ปกติ ไม่กระตุก ไม่ไหล
--- หลักการ: hook ReplicatedStorage Send/FireServer แทรก offset position
--- ทำให้ server hitbox อยู่คนละที่ → Silent Aim ของคนอื่น miss
+-- Anti-Look v7 — Triple Layer
+-- Layer 1: hookmetamethod __index บน Head/HRP → Position ปลอม
+--   กัน silent aim ทุกค่าย ที่อ่าน part.Position โดยตรง
+-- Layer 2: Decoy Model วนรอบตัว (visual indicator + กัน aim ที่ find จาก model)
+-- Layer 3: Server Shake → server เห็น hitbox สั่นรุนแรง client ไม่เห็น
 -- ถภสรยงศซศฐญขฅฆฉชซฌญฎฏฐ
 local AntiLookEnabled = false
-local AntiLookStrength = 12  -- ระยะ offset หน่วย studs (ค่ายิ่งมาก ยิ่งกัน aim ได้ดี แต่ lag อาจเพิ่ม)
-local AntiLookConnection = nil
-local antiLookOffset = Vector3.new(0, 0, 0)
-local antiLookFlipTimer = 0
-local antiLookFlipInterval = 0.08  -- วินาที — เปลี่ยน offset ทุกกี่วินาที
+local AntiLookDecoyDist = 12
+local AntiLookShake = true
+local AntiLookConn = nil
+local AntiLookShakeConn = nil
+local AntiLookHookConn = nil
 
--- สร้าง offset สุ่มทิศรอบ ๆ ตัว (แนวราบ + สูงเล็กน้อย) ไม่ทำให้ลอยขึ้น
-local function newAntiLookOffset(strength)
-    local angle = math.random() * math.pi * 2
-    local hDist = strength * (0.7 + math.random() * 0.3)
-    local vDist = strength * (math.random() * 0.25)  -- สูงขึ้นนิดหน่อยเท่านั้น
-    return Vector3.new(math.cos(angle) * hDist, vDist, math.sin(angle) * hDist)
+local decoyModel = nil
+local decoyHead = nil
+local decoyHRP = nil
+
+-- offset ปลอมที่จะส่งออก (update ทุก Heartbeat)
+local fakeOffset = Vector3.new(0, 0, 0)
+local hookActive = false
+
+-- ถภสรยงศซศฐญขฅฆฉชซฌญฎฏฐ
+-- Layer 1: hookmetamethod — ดักการอ่าน Position จาก Head/HRP
+-- ถภสรยงศซศฐญขฅฆฉชซฌญฎฏฐ
+local function StartHook()
+    if not hookmetamethod then return end
+    hookActive = true
+    local mt = getrawmetatable(game)
+    local oldIndex = mt.__index
+    hookmetamethod(game, "__index", function(self, key)
+        if hookActive and key == "Position" then
+            local char = LocalPlayer.Character
+            if char then
+                local head = char:FindFirstChild("Head")
+                local hrp = char:FindFirstChild("HumanoidRootPart")
+                if (self == head or self == hrp) then
+                    -- คืน position ปลอมที่อยู่ห่างออกไปตาม fakeOffset
+                    return rawget(self, "Position") ~= nil
+                        and (oldIndex(self, key) + fakeOffset)
+                        or oldIndex(self, key) + fakeOffset
+                end
+            end
+        end
+        return oldIndex(self, key)
+    end)
 end
 
--- hook network packet ที่ส่งตำแหน่งตัวละครไป server
--- Roblox ส่ง position ผ่าน physics replication — เราแตะ CFrame ชั่วคราว 1 frame แล้ว restore
-local function ToggleAntiLook(state)
-    -- ปิด connection เก่าก่อนเสมอ (ใช้ชื่อตัวแปรให้ตรง)
+local function StopHook()
+    hookActive = false
+    -- hookmetamethod ไม่มี unhook โดยตรง แต่ set hookActive = false
+    -- ทำให้ return position จริงทันที
+end
+
+local function CreateDecoy()
+    if decoyModel then pcall(function() decoyModel:Destroy() end) end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
+
+    decoyModel = Instance.new("Model")
+    decoyModel.Name = LocalPlayer.Name
+    decoyModel.Parent = workspace
+
+    decoyHRP = Instance.new("Part")
+    decoyHRP.Name = "HumanoidRootPart"
+    decoyHRP.Size = Vector3.new(2, 2, 1)
+    decoyHRP.BrickColor = BrickColor.new("Medium stone grey")
+    decoyHRP.Transparency = 0.5
+    decoyHRP.CanCollide = false
+    decoyHRP.Anchored = true
+    decoyHRP.Parent = decoyModel
+
+    decoyHead = Instance.new("Part")
+    decoyHead.Name = "Head"
+    decoyHead.Size = Vector3.new(2, 1, 1)
+    decoyHead.BrickColor = BrickColor.new("Medium stone grey")
+    decoyHead.Transparency = 0.5
+    decoyHead.CanCollide = false
+    decoyHead.Anchored = true
+    decoyHead.Parent = decoyModel
+
+    local fakeHum = Instance.new("Humanoid")
+    fakeHum.Health = 100
+    fakeHum.MaxHealth = 100
+    fakeHum.Parent = decoyModel
+
+    -- ใส่ทุก part ที่ silent aim อาจหา (UpperTorso, LowerTorso)
+    for _, pname in ipairs({"UpperTorso","LowerTorso","Torso"}) do
+        local fp = Instance.new("Part")
+        fp.Name = pname
+        fp.Size = Vector3.new(2,2,1)
+        fp.Transparency = 1
+        fp.CanCollide = false
+        fp.Anchored = true
+        fp.Parent = decoyModel
+    end
+
+    decoyModel.PrimaryPart = decoyHRP
+end
+
+local function DestroyDecoy()
+    if decoyModel then
+        pcall(function() decoyModel:Destroy() end)
+        decoyModel = nil decoyHead = nil decoyHRP = nil
+    end
+end
+
+local function StopAntiLook()
     AntiLookEnabled = false
-    if AntiLookConnection then AntiLookConnection:Disconnect() AntiLookConnection = nil end
-    antiLookOffset = Vector3.new(0, 0, 0)
-    antiLookFlipTimer = 0
+    StopHook()
+    if AntiLookConn then AntiLookConn:Disconnect() AntiLookConn = nil end
+    if AntiLookShakeConn then AntiLookShakeConn:Disconnect() AntiLookShakeConn = nil end
+    if AntiLookHookConn then AntiLookHookConn:Disconnect() AntiLookHookConn = nil end
+    DestroyDecoy()
+    fakeOffset = Vector3.new(0, 0, 0)
+end
 
+local function ToggleAntiLook(state)
+    StopAntiLook()
     if not state then return end
-
     AntiLookEnabled = true
+    CreateDecoy()
+    StartHook()
 
-    AntiLookConnection = RunService.Heartbeat:Connect(function(dt)
+    local decoyAngle = 0
+    local fakeAngle = 0
+
+    -- Loop หลัก: ขยับ decoy + อัพเดต fakeOffset สำหรับ hook
+    AntiLookConn = RunService.Heartbeat:Connect(function(dt)
         if not AntiLookEnabled then return end
         local char = LocalPlayer.Character
         if not char then return end
         local hrp = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChild("Humanoid")
-        if not hrp or not hum then return end
+        if not hrp then return end
 
-        antiLookFlipTimer = antiLookFlipTimer + dt
-        if antiLookFlipTimer >= antiLookFlipInterval then
-            antiLookFlipTimer = 0
-            antiLookOffset = newAntiLookOffset(AntiLookStrength)
+        -- หมุน decoy รอบตัว
+        decoyAngle = (decoyAngle + dt * 120) % 360
+        local rad = math.rad(decoyAngle)
+        local jitterY = math.sin(tick() * 8) * 0.5
+        local base = hrp.Position
+        local decoyPos = Vector3.new(
+            base.X + math.cos(rad) * AntiLookDecoyDist,
+            base.Y + 3 + jitterY,
+            base.Z + math.sin(rad) * AntiLookDecoyDist
+        )
+        if decoyHRP and decoyHRP.Parent then
+            decoyHRP.Position = decoyPos
+            -- sync ทุก part ใน decoy
+            for _, p in ipairs(decoyModel:GetChildren()) do
+                if p:IsA("BasePart") and p ~= decoyHead then
+                    p.Position = decoyPos
+                end
+            end
+        end
+        if decoyHead and decoyHead.Parent then
+            decoyHead.Position = decoyPos + Vector3.new(0, 1.5, 0)
         end
 
-        local realCF = hrp.CFrame
-        hrp.CFrame = realCF + antiLookOffset
-
-        -- ใช้ตัวแปร local capture เพื่อกัน defer วิ่งหลังปิด
-        local enabled = AntiLookEnabled
-        task.defer(function()
-            if hrp and hrp.Parent and enabled and AntiLookEnabled then
-                hrp.CFrame = realCF
-            end
-        end)
+        -- อัพเดต fakeOffset สำหรับ hookmetamethod
+        -- offset ชี้ไปทางเดียวกับ decoy → silent aim ที่อ่าน Position จะได้จุด decoy
+        fakeAngle = (fakeAngle + dt * 130) % 360
+        local fr = math.rad(fakeAngle)
+        fakeOffset = Vector3.new(
+            math.cos(fr) * AntiLookDecoyDist,
+            3 + jitterY,
+            math.sin(fr) * AntiLookDecoyDist
+        )
     end)
+
+    -- Server Shake
+    if AntiLookShake then
+        AntiLookShakeConn = RunService.Heartbeat:Connect(function()
+            if not AntiLookEnabled then return end
+            local char = LocalPlayer.Character
+            if not char then return end
+            local hrp = char:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+            local realCF = hrp.CFrame
+            local crazyY = (math.random() > 0.5 and 1 or -1) * math.random(500, 2000)
+            hrp.Velocity = Vector3.new(
+                (math.random() - 0.5) * 1000,
+                crazyY,
+                (math.random() - 0.5) * 1000
+            )
+            task.defer(function()
+                if hrp and hrp.Parent and AntiLookEnabled then
+                    hrp.CFrame = realCF
+                    hrp.Velocity = Vector3.new(0, 0, 0)
+                end
+            end)
+        end)
+    end
 end
+
+LocalPlayer.CharacterAdded:Connect(function()
+    DestroyDecoy()
+    if AntiLookEnabled then
+        StopAntiLook()
+        task.wait(1)
+        ToggleAntiLook(true)
+    end
+end)
 
 PlayerTab:Toggle({
     Title = "Anti-Look",
-    Desc = "ป้องกัน Silent Aim ของคนอื่น — server เห็น hitbox คนละที่ client ดูปกติ",
+    Desc = "กัน Silent Aim ทุกค่าย (Hook + Decoy + Shake)",
     Default = false,
     Callback = function(v) ToggleAntiLook(v) end
 })
 PlayerTab:Slider({
-    Title = "Anti-Look Strength",
-    Desc = "ระยะ offset (studs) — มากขึ้น = กัน aim ได้ดีขึ้น",
+    Title = "Decoy Distance",
+    Desc = "ระยะ decoy ห่างจากตัว (studs)",
     Step = 1,
-    Value = {Min = 3, Max = 30, Default = 12},
-    Callback = function(v) AntiLookStrength = v end
+    Value = {Min = 5, Max = 30, Default = 12},
+    Callback = function(v) AntiLookDecoyDist = v end
 })
-PlayerTab:Slider({
-    Title = "Anti-Look Speed",
-    Desc = "ความถี่เปลี่ยน offset (ms) — น้อย = เปลี่ยนเร็ว กัน aim ได้ดีกว่า",
-    Step = 10,
-    Value = {Min = 30, Max = 200, Default = 80},
-    Callback = function(v) antiLookFlipInterval = v / 1000 end
+PlayerTab:Toggle({
+    Title = "Server Shake",
+    Desc = "ทำให้ server เห็นตัวสั่นขึ้นฟ้า/ทะลุดิน (client เห็นปกติ)",
+    Default = true,
+    Callback = function(v)
+        AntiLookShake = v
+        if AntiLookEnabled then
+            StopAntiLook()
+            ToggleAntiLook(true)
+        end
+    end
 })
 
 PlayerTab:Section({Title="Sit System"})
