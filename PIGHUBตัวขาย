@@ -48,9 +48,8 @@ local function rainbowText(element, property)
 end
 
 local Window
-if WindUI then
-    Window = WindUI:CreateWindow({
-        Title = "PIGHUB [BUY] | Block Spin 🔫| Paid 💸",
+if WindUI BUY    Window = WindUI:CreateWindow({
+        Title = "PIGHUB [BUY]",
         Icon = "piggy-bank",
         Author = "🐷 PIG FARM OFFICIAL 🐷",
         Folder = "PIGHUB Config",
