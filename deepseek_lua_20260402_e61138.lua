@@ -15,7 +15,7 @@ local CharImage = Instance.new("ImageLabel")
 CharImage.Size = UDim2.new(0, 350, 0, 350)
 CharImage.Position = UDim2.new(0.5, -175, 0.5, -200)
 CharImage.BackgroundTransparency = 1
-CharImage.Image = "rbxassetid://111558926796109"
+CharImage.Image = "rbxassetid://120071332053245"
 CharImage.ImageTransparency = 1
 CharImage.Parent = MainFrame
 
